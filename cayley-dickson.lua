@@ -53,7 +53,10 @@ function CayleyDickson:init(n)
 	for i=1,x do
 		self[i] = {}
 		for j=1,x do
-			self[i][j] = Element{index=bit.bxor(i-1,j-1), negative=negative(i-1,j-1,x)}
+			self[i][j] = Element{
+				index = bit.bxor(i-1,j-1),
+				negative = negative(i-1,j-1,x),
+			}
 		end
 	end
 end
@@ -92,7 +95,7 @@ function CayleyDickson:getTriplets()
 				if j < i then i,j,k = j,k,i end
 				if k < i then i,j,k = k,i,j end
 				local triplet = table{i,j,k}
-				local key = triplet:concat('_')
+				local key = triplet:concat'_'
 				if not foundSet[key] then
 					foundSet[key] = true
 					found:insert{
