@@ -1,5 +1,3 @@
-#! /usr/bin/env luajit
-
 --[[
 0 = real
 1 = complex
@@ -7,7 +5,8 @@
 3 = octonion
 4 = sedenion
 --]]
-require 'ext'
+local table = require 'ext.table'
+local class = require 'ext.class'
 local bit = require 'bit'
 
 local function negative(i,j,x)
@@ -108,31 +107,15 @@ function CayleyDickson:getTriplets()
 	return found
 end
 
-function CayleyDickson:printTripletDotGraph()
+function CayleyDickson:printTripletDotGraph(output)
+	output = output or print
 	local x = #self
-	print('digraph CayleyDickson'..x..' {')
+	output('digraph CayleyDickson'..x..' {')
 	for _,triplet in ipairs(self:getTriplets()) do
 		local i,j,k = table.map(triplet, function(el) return el.index end):unpack()
-		print('\te'..i..' -> e'..j..' -> e'..k..' -> e'..i..';')
+		output('\te'..i..' -> e'..j..' -> e'..k..' -> e'..i..';')
 	end
-	print('}')
+	output('}')
 end
 
-
-local cayleyDicksonTables = table()
-for i=0,5 do
-	print('table '..i)
-	local c = CayleyDickson(i)
-	cayleyDicksonTables[i] = c
-	print(c)
-	c:printTripletDotGraph()
-end
-
-local sedenions = cayleyDicksonTables[4]
-local triplets = sedenions:getTriplets()
-
-for _,triplet in ipairs(triplets) do
-	print(table.map(triplet,tostring):concat(' -> '))
-end
-
-
+return CayleyDickson
