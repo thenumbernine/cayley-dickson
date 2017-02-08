@@ -367,90 +367,6 @@ triplets arranged into mobius strips of mobius strips:
 7 C B                   7       B C
 7 D A                   7     A     D
 
-so each number shows up each ring 3x ...
-(similar to how each triplet shows upin each ring 3x ...)
-e:		ring #s e is present: 
-1		1	2	3	4	5	6	7
-2		1	2	3	8	9	A	B
-3		1	2	3	C	D	E	F
-4		1	4	5	8	9	C	D
-5		1	4	5	A	B	E	F
-6		1	6	7	8	9	E	F
-7		1	6	7	A	B	C	D
-8		2	4	6	8	A	C	E
-9		2	4	6	9	B	D	F
-A		2	5	7	8	A	D	F
-B		2	5	7	9	B	C	E
-C		3	4	7	8	B	C	F
-D		3	4	7	9	A	D	E
-E		3	5	6	8	B	D	E
-F		3	5	6	9	A	C	F
-
-each of these pairs of e's have a triplet of rings in common:
-	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F
-1		123	123	145	145	176	176	246	246	257	257	347	347	365	365
-2	123		123	189	1BA	189	1BA	28A	29B	28A	29B	38B	3A9	38B	3A9
-3	123	123		1DC	1EF	1EF	1DC	2EC	2FD	2FD	2EC	3FC	3DE	3DE	3FC
-4	145	189	1DC		145	189	1DC	48C	49D	58D	5C9	48C	49D	58D	5C9
-5	145	1BA	1EF	145		1EF	1BA	4AE	4BF	5AF	5EB	4BF	4AE	5EB	5AF
-6	176	189	1EF	189	1EF		176	68E	6F9	78F	79E	78F	79E	68E	6F9
-7	176	1BA	1DC	1DC	1BA	176		6CA	6BD	7DA	7CB	7CB	7DA	6BD	6CA
-8	246	28A	2EC	48C	4AE	68E	6CA		246	28A	2EC	48C	4AE	68E	6CA
-9	246	29B	2FD	49D	4BF	6F9	6BD	246		2FD	29B	4BF	49D	6BD	6F9
-A	257	28A	2FD	58D	5AF	78F	7DA	28A	2FD		257	78F	7DA	58D	5AF
-B	257	29B	2EC	5C9	5EB	79E	7CB	2EC	29B	257		7CB	79E	5EB	5C9
-C	347	38B	3FC	48C	4BF	78F	7CB	48C	4BF	78F	7CB		347	38B	3FC
-D	347	3A9	3DE	49D	4AE	79E	7DA	4AE	49D	7DA	79E	347		3DE	3A9
-E	365	38B	3DE	58D	5EB	68E	6BD	68E	6BD	58D	5EB	38B	3DE		365
-F	365	3A9	3FC	5C9	5AF	6F9	6CA	6CA	6F9	5AF	5C9	3FC	3A9	365
-
-so the triplets of rings are isomorphic to the triplets of e's
-...therefore??? the 15 rings are isomorphic to the 15 e's ?
-this makes me guess that the 7 double-rings with signs flipped are isomorphic to e1..e7
-would that mean there's a way to renumber the rings so that there are no more 2-rotations of triplets:
-
-mapping between e triplets and ring triplets
-triplet of 
-
-e #s:	ring #s:
-	directly matching:
-123		123
-145		145
-176		176
-28A		28A
-29B		29B
-3DE		3DE
-3FC		3FC
-48C		48C
-49D		49D
-5AF		5AF
-5EB		5EB
-68E		68E
-6F9		6F9
-7CB		7CB
-7DA		7DA
-	2-rotations:
-189		246
-246		189
-1BA		257
-257		1BA
-1DC		347
-347		1DC
-1EF		365
-365		1EF
-2EC		38B
-38B		2EC
-2FD		3A9
-3A9		2FD
-4AE		58D
-58D		4AE
-4BF		5C9
-5C9		4BF
-6BD		79E
-79E		6BD
-6CA		78F
-78F		6CA
-
 rearranging e's found in rings:
 1		1	2	3	4	5	6	7
 2		1	2	3	8	9	A	B
@@ -507,6 +423,7 @@ all triplets together:
 7 D A
 
 all rings:
+	single rings:
 1 2 5 3 7 6 4 = +1+2+3 +2+5+7 +5+3+6 +3+7-4 +7+6+1 +6-4+2 -4+1+5
 1 2 8 3 A B 9 = +1+2+3 +2+8+A +8+3-B +3+A+9 +A-B+1 -B+9+2 +9+1+8
 1 4 8 5 C D 9 = +1+4+5 +4+8+C +8+5-D +5+C+9 +C-D+1 -D+9+4 +9+1+8
@@ -515,8 +432,7 @@ all rings:
 2 5 8 7 D F A
 3 4 8 7 C F B
 3 6 8 5 E D B 
-
-signs flip:
+	double rings with signs flip:
 1 2 E 3 C D F
 1 4 A 5 E F B 
 1 7 C 6 B A D 
@@ -525,4 +441,107 @@ signs flip:
 3 4 A 7 E D 9 
 3 6 C 5 A 9 F 
 
+each number shows up each ring 3x ...
+(similar to how each triplet shows upin each ring 3x ...)
+e:		ring #s e is present: 
+1		1	2	3	4	5	6	7
+2		1	2	3	8	9	A	B
+3		1	2	3	C	D	E	F
+4		1	4	5	8	9	C	D
+5		1	4	5	A	B	E	F
+6		1	6	7	8	9	E	F
+7		1	6	7	A	B	C	D
+8		2	4	6	8	A	C	E
+9		2	4	6	9	B	D	F
+A		2	5	7	8	A	D	F
+B		2	5	7	9	B	C	E
+C		3	4	7	8	B	C	F
+D		3	4	7	9	A	D	E
+E		3	5	6	8	B	D	E
+F		3	5	6	9	A	C	F
 
+each of these pairs of e's have a triplet of rings in common:
+	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F
+1		123	123	145	145	176	176	246	246	257	257	347	347	365	365
+2	123		123	189	1BA	189	1BA	28A	29B	28A	29B	38B	3A9	38B	3A9
+3	123	123		1DC	1EF	1EF	1DC	2EC	2FD	2FD	2EC	3FC	3DE	3DE	3FC
+4	145	189	1DC		145	189	1DC	48C	49D	58D	5C9	48C	49D	58D	5C9
+5	145	1BA	1EF	145		1EF	1BA	4AE	4BF	5AF	5EB	4BF	4AE	5EB	5AF
+6	176	189	1EF	189	1EF		176	68E	6F9	78F	79E	78F	79E	68E	6F9
+7	176	1BA	1DC	1DC	1BA	176		6CA	6BD	7DA	7CB	7CB	7DA	6BD	6CA
+8	246	28A	2EC	48C	4AE	68E	6CA		246	28A	2EC	48C	4AE	68E	6CA
+9	246	29B	2FD	49D	4BF	6F9	6BD	246		2FD	29B	4BF	49D	6BD	6F9
+A	257	28A	2FD	58D	5AF	78F	7DA	28A	2FD		257	78F	7DA	58D	5AF
+B	257	29B	2EC	5C9	5EB	79E	7CB	2EC	29B	257		7CB	79E	5EB	5C9
+C	347	38B	3FC	48C	4BF	78F	7CB	48C	4BF	78F	7CB		347	38B	3FC
+D	347	3A9	3DE	49D	4AE	79E	7DA	4AE	49D	7DA	79E	347		3DE	3A9
+E	365	38B	3DE	58D	5EB	68E	6BD	68E	6BD	58D	5EB	38B	3DE		365
+F	365	3A9	3FC	5C9	5AF	6F9	6CA	6CA	6F9	5AF	5C9	3FC	3A9	365	
+
+so the triplets of rings are isomorphic to the triplets of e's
+...therefore??? the 15 rings are isomorphic to the 15 e's ?
+this makes me guess that the 7 double-rings with signs flipped are isomorphic to e1..e7
+would that mean there's a way to renumber the rings so that there are no more 2-rotations of triplets:
+
+mapping between e triplets and ring triplets
+triplet of 
+
+e #s:	ring #s:
+	directly matching:
+123		123
+145		145
+176		176
+28A		28A
+29B		29B
+3DE		3DE
+3FC		3FC
+48C		48C
+49D		49D
+5AF		5AF
+5EB		5EB
+68E		68E
+6F9		6F9
+7CB		7CB
+7DA		7DA
+	pairs:
+189		246
+246		189
+1BA		257
+257		1BA
+1DC		347
+347		1DC
+1EF		365
+365		1EF
+2EC		38B
+38B		2EC
+2FD		3A9
+3A9		2FD
+4AE		58D
+58D		4AE
+4BF		5C9
+5C9		4BF
+6BD		79E
+79E		6BD
+6CA		78F
+78F		6CA
+
+which are directly matching and which are pairs:
+	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F
+1		...	...	...	...	...	...	XXX	XXX	XXX	XXX	XXX	XXX	XXX	XXX
+2	...		...	XXX	XXX	XXX	XXX	...	...	...	...	XXX	XXX	XXX	XXX
+3	...	...		XXX	XXX	XXX	XXX	XXX	XXX	XXX	XXX	...	...	...	...
+4	...	XXX	XXX		...	XXX	XXX	...	...	XXX	XXX	...	...	XXX	XXX
+5	...	XXX	XXX	...		XXX	XXX	XXX	XXX	...	...	XXX	XXX	...	...
+6	...	XXX	XXX	XXX	XXX		...	...	...	XXX	XXX	XXX	XXX	...	...
+7	...	XXX	XXX	XXX	XXX	...		XXX	XXX	...	...	...	...	XXX	XXX
+8	XXX	...	XXX	...	XXX	...	XXX		XXX	...	XXX	...	XXX	...	XXX
+9	XXX	...	XXX	...	XXX	...	XXX	XXX		XXX	...	XXX	...	XXX	...
+A	XXX	...	XXX	XXX	...	XXX	...	...	XXX		XXX	XXX	...	XXX	...
+B	XXX	...	XXX	XXX	...	XXX	...	XXX	...	XXX		...	XXX	...	XXX
+C	XXX	XXX	...	...	XXX	XXX	...	...	XXX	XXX	...		XXX	XXX	...
+D	XXX	XXX	...	...	XXX	XXX	...	XXX	...	...	XXX	XXX		...	XXX
+E	XXX	XXX	...	XXX	...	...	XXX	...	XXX	XXX	...	XXX	...		XXX
+F	XXX	XXX	...	XXX	...	...	XXX	XXX	...	...	XXX	...	XXX	XXX
+
+what if I rename the rings, to try and find that isomorphism:
+take note that depending on how they are rearranged, they might not reproduce the original triplets.
