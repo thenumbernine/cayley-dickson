@@ -17,6 +17,7 @@ App.title = 'Force Directed Graph'
 
 function App:initGL()
 	gl.glEnable(gl.GL_DEPTH_TEST)
+	gl.glDisable(gl.GL_CULL_FACE)
 
 	self.c = CayleyDickson(3)
 
@@ -26,260 +27,48 @@ function App:initGL()
 
 	self.vtxs = table()
 	for i=1,#self.c-1 do
+		-- [[ mobius strip
 		local angle = (angleForIndex[i]-1) / (#self.c - 1) * 360
 		self.vtxs[i] = {
 			pos = quat():fromAngleAxis(0,0,1,angle):rotate(
-				quat():fromAngleAxis(0,1,0,angle/2):rotate{0,0,.1} 
+				quat():fromAngleAxis(0,1,0,angle/2):rotate{0,0,.5} 
 					+ {1,0,0}
 			),
 			vel = vec3(),
 		}
+		--]]
+		--[[ ring
+		local angle = (i-1) / #self.c * 360
+		self.vtxs[i] = {
+			pos = quat():fromAngleAxis(0,0,1,angle):rotate(
+				{1,0, .1 * ((i%2)*2-1)} 
+			),		
+			vel = vec3(),
+		}
+		--]]
+		--[[ line
+		local angle = (i-1) / #self.c * 360
+		self.vtxs[i] = {
+			pos = vec3(angle,0, .1 * ((i%2)*2-1)),
+			vel = vec3(),
+		}	
+		--]]
 	end
 
 	self.triplets = self.c:getTriplets()
---[[
-	 e0	 e1	 e2	 e3	 e4	 e5	 e6	 e7
-e0	+e0	+e1	+e2	+e3	+e4	+e5	+e6	+e7
-e1	+e1	-e0	+e3	-e2	+e5	-e4	-e7	+e6
-e2	+e2	-e3	-e0	+e1	+e6	+e7	-e4	-e5
-e3	+e3	+e2	-e1	-e0	+e7	-e6	+e5	-e4
-e4	+e4	-e5	-e6	-e7	-e0	+e1	+e2	+e3
-e5	+e5	+e4	-e7	+e6	-e1	-e0	-e3	+e2
-e6	+e6	+e7	+e4	-e5	-e2	+e3	-e0	-e1
-e7	+e7	-e6	+e5	+e4	-e3	-e2	+e1	-e0
+end
 
-triplets:
-1 2 3
-2 5 7
-3 6 5
-3 4 7
-1 7 6
-2 4 6
-1 4 5
-
-mobius strip:
-1 2 . 3 . .  .
-. 2 5 . 7 .  .
-. . 5 3 . 6  .
-. . . 3 7 . -4
-1 . . . 7 6  .
-. 2 . . . 6 -4
-1 . 5 . . . -4
-
-
-	 e0	 e1	 e2	 e3	 e4	 e5	 e6	 e7	 e8	 e9	 eA	 eB	 eC	 eD	 eE	 eF
-e0	+e0	+e1	+e2	+e3	+e4	+e5	+e6	+e7	+e8	+e9	+eA	+eB	+eC	+eD	+eE	+eF
-e1	+e1	-e0	+e3	-e2	+e5	-e4	-e7	+e6	+e9	-e8	-eB	+eA	-eD	+eC	+eF	-eE
-e2	+e2	-e3	-e0	+e1	+e6	+e7	-e4	-e5	+eA	+eB	-e8	-e9	-eE	-eF	+eC	+eD
-e3	+e3	+e2	-e1	-e0	+e7	-e6	+e5	-e4	+eB	-eA	+e9	-e8	-eF	+eE	-eD	+eC
-e4	+e4	-e5	-e6	-e7	-e0	+e1	+e2	+e3	+eC	+eD	+eE	+eF	-e8	-e9	-eA	-eB
-e5	+e5	+e4	-e7	+e6	-e1	-e0	-e3	+e2	+eD	-eC	+eF	-eE	+e9	-e8	+eB	-eA
-e6	+e6	+e7	+e4	-e5	-e2	+e3	-e0	-e1	+eE	-eF	-eC	+eD	+eA	-eB	-e8	+e9
-e7	+e7	-e6	+e5	+e4	-e3	-e2	+e1	-e0	+eF	+eE	-eD	-eC	+eB	+eA	-e9	-e8
-e8	+e8	-e9	-eA	-eB	-eC	-eD	-eE	-eF	-e0	+e1	+e2	+e3	+e4	+e5	+e6	+e7
-e9	+e9	+e8	-eB	+eA	-eD	+eC	+eF	-eE	-e1	-e0	-e3	+e2	-e5	+e4	+e7	-e6
-eA	+eA	+eB	+e8	-e9	-eE	-eF	+eC	+eD	-e2	+e3	-e0	-e1	-e6	-e7	+e4	+e5
-eB	+eB	-eA	+e9	+e8	-eF	+eE	-eD	+eC	-e3	-e2	+e1	-e0	-e7	+e6	-e5	+e4
-eC	+eC	+eD	+eE	+eF	+e8	-e9	-eA	-eB	-e4	+e5	+e6	+e7	-e0	-e1	-e2	-e3
-eD	+eD	-eC	+eF	-eE	+e9	+e8	+eB	-eA	-e5	-e4	+e7	-e6	+e1	-e0	+e3	-e2
-eE	+eE	-eF	-eC	+eD	+eA	-eB	+e8	+e9	-e6	-e7	-e4	+e5	+e2	-e3	-e0	+e1
-eF	+eF	+eE	-eD	-eC	+eB	+eA	-e9	+e8	-e7	+e6	-e5	-e4	+e3	+e2	-e1	-e0
-
-triplets:   in ring #s:
-1 2 3       1 2 3        
-1 4 5       1     4 5    
-1 7 6       1         6 7
-1 8 9         2   4   6  
-1 B A         2     5   7
-1 D C           3 4     7
-1 E F           3   5 6
-2 4 6       1             8 9
-2 5 7       1                 A B
-2 8 A         2           8   A
-2 9 B         2             9   B
-2 E C           3         8     B
-2 F D           3           9 A
-3 4 7       1
-3 6 5       1
-3 8 B         2          
-3 A 9         2          
-3 D E           3
-3 F C           3
-4 8 C             4       8
-4 9 D             4         9
-4 A E               5     8
-4 B F               5       9
-5 8 D             4           A
-5 A F               5         A
-5 C 9             4             B
-5 E B               5           B
-6 8 E                 6   8
-6 B D                   7   9
-6 C A                   7 8
-6 F 9                 6     9
-7 8 F                 6       A
-7 9 E                 6         B
-7 C B                   7       B
-7 D A                   7     A
-
-mobius strips:
-ring #1:
-1 2 5 3 7 6 -4:
-1 2 . 3 . .  .
-. 2 5 . 7 .  .
-. . 5 3 . 6  .
-. . . 3 7 . -4
-1 . . . 7 6  .
-. 2 . . . 6 -4
-1 . 5 . . . -4
-
-ring #2:
-1 2 8 3 A -B 9:
-1 2 . 3 .  . .
-. 2 8 . A  . .
-. . 8 3 . -B .
-. . . 3 A  . 9
-1 . . . A -B .
-. 2 . . . -B 9
-1 . 8 . .  . 9
-
-ring #3:
- 1 2 E 3 C D -F:
- 1 2 . 3 . .  .
- . 2 E . C .  .
- . . E 3 . D  .
- . . . 3 C . -F
--1 . . . C D  .	<- flip signs, so this is a double ring
- . 2 . . . D -F
--1 . E . . . -F
-
-ring #4:
-1 4 8 5 C -D 9:
-1 4 . 5 .  . .
-. 4 8 . C  . .
-. . 8 5 . -D .
-. . . 5 C  . 9
-1 . . . C -D .
-. 4 . . . -D 9
-1 . 8 . .  . 9
-
-ring #5:
- 1 4 A 5 E -F B:
- 1 4 . 5 .  . .
- . 4 A . E  . .
- . . A 5 . -F .
- . . . 5 E  . B
--1 . . . E -F .	<- flip signs
- . 4 . . . -F B
--1 . A . .  . B
-
-ring #6:
-1 7 8 6 F -E 9:
-1 7 . 6 .  . .
-. 7 8 . F  . .
-. . 8 6 . -E .
-. . . 6 F  . 9
-1 . . . F -E .
-. 7 . . . -E 9
-1 . 8 . .  . 9
-
-ring #7
- 1 7 C 6 B -A D:
- 1 7 . 6 .  . .
- . 7 C . B  . .
- . . C 6 . -A .
- . . . 6 B  . D
--1 . . . B -A .	<- flip signs
- . 7 . . . -A D
--1 . C . .  . D
-
-ring #8:
-2 4 8 6 C -E A:
-2 4 . 6 .  . .
-. 4 8 . C  . .
-. . 8 6 . -E .
-. . . 6 C  . A
-2 . . . C -E .
-. 4 . . . -E A
-2 . 8 . .  . A
-
-ring #9:
- 2 4 9 6 D F -B:
- 2 4 . 6 . .  .
- . 4 9 . D .  .
- . . 9 6 . F  .
- . . . 6 D . -B
--2 . . . D F  .	<- flip signs
- . 4 . . . F -B
--2 . 9 . . . -B
-
-ring #A:
-2 5 8 7 D -F A:
-2 5 . 7 .  . .
-. 5 8 . D  . .
-. . 8 7 . -F .
-. . . 7 D  . A
-2 . . . D -F .
-. 5 . . . -F A
-2 . 8 . .  . A
-
-ring #B:
- 2 5 C 7 9 -B E:
- 2 5 . 7 .  . .
- . 5 C . 9  . .
- . . C 7 . -B .
- . . . 7 9  . E
--2 . . . 9 -B .	<- flip signs
- . 5 . . . -B E
--2 . C . .  . E
-
-ring #3b
- 1 D . C .  .  .
- . D 2 . F  .  .
- . . 2 C . -E  .
- . . . C F  . -3 
- 1 . . . F -E  .
- . D . . . -E -3
--1 . 2 . .  . -3 <- repeat in ring #1 ... sign is flipped, so this ring is doubled
-
-all triplets together:
-1 2   3
-  2 5   7
-    5 3    6
-1     4 5
-1         7 6
-1             8 9
-1                 B A
-1                     -C D
-1                           E F 
-  2   4     6
-  2           8     A
-  2             9 B
-  2                    -C   E
-  2                 F D
-    3 4   7
-    3         8   B
-    3               A 9
-3 D E
-3 F C
-4 8 C
-4 9 D
-4 A E
-4 B F
-5 8 D
-5 A F
-5 C 9
-5 E B
-6 8 E
-6 B D
-6 C A
-6 F 9
-7 8 F
-7 9 E
-7 C B
-7 D A
-
-
+local function barylerp(vs, u,v,w)
+--[[ linear
+	return vs[1] * u + vs[2] * v + vs[3] * w
+--]]
+--[[ normalize
+	return vs[1] * u + vs[2] * v + vs[3] * w
+--]]
+-- [[ spherical 
+	return (vs[1] * u + vs[2] * v + vs[3] * w):normalize() * (
+		vs[1]:length() * u + vs[2]:length() * v + vs[3]:length() * w
+	)
 --]]
 end
 
@@ -314,17 +103,64 @@ function App:update()
 	gl.glRotatef(aa[4], aa[1], aa[2], aa[3])
 
 	local colors = {
-		table{1,0,0},
-		table{0,1,0},
-		table{0,0,1},
+		vec3(1,0,0),
+		vec3(0,1,0),
+		vec3(0,0,1),
 	}
 
 	gl.glBegin(gl.GL_TRIANGLES)
-	for _,triplet in ipairs(self.triplets) do
+--	for _,triplet in ipairs(self.triplets) do
+	for _,triplet in ipairs{{{index=1},{index=2},{index=3}}} do
+--[[ draw flat triangles	
 		for j=1,3 do
 			gl.glColor3d(colors[j]:unpack())
 			gl.glVertex3d(self.vtxs[triplet[j].index].pos:unpack())
 		end
+--]]
+-- [[ draw tesselated triangles
+		local vs = range(3):map(function(i) return self.vtxs[triplet[i].index].pos end)
+		local div = 5
+		local d = 1/div
+		for i=0,div-1 do
+			local u = i/div
+			for j=0,div-1-i do
+				local v = j/div
+				local k=div-1-i-j
+				local w = k/div
+				-- barycentric coordinates, so i+j+k = div-1
+				gl.glColor3d(barylerp(colors,u+d,v,w):unpack())
+				gl.glVertex3d(barylerp(vs,u+d,v,w):unpack())
+				gl.glColor3d(barylerp(colors,u,v+d,w):unpack())
+				gl.glVertex3d(barylerp(vs,u,v+d,w):unpack())
+				gl.glColor3d(barylerp(colors,u,v,w+d):unpack())
+				gl.glVertex3d(barylerp(vs,u,v,w+d):unpack())
+				--[[
+				if i>0 then
+					gl.glColor3d(barylerp(colors,u-d,v,w):unpack())
+					gl.glVertex3d(barylerp(vs,u-d,v,w):unpack())
+					gl.glColor3d(barylerp(colors,u,v+d,w):unpack())
+					gl.glVertex3d(barylerp(vs,u,v+d,w):unpack())
+					gl.glColor3d(barylerp(colors,u,v,w+d):unpack())
+					gl.glVertex3d(barylerp(vs,u,v,w+d):unpack())
+				end
+				--]]
+				--[[
+				if j<div-1 and k<div-1 then
+					gl.glColor3d(barylerp(colors,u-2*d,v+d,w+d):unpack())
+					gl.glVertex3d(barylerp(vs,u-2*d,v+d,w+d):unpack())
+				end
+				if i<div-1 and k<div-1 then
+					gl.glColor3d(barylerp(colors,u+d,v-2*d,w+d):unpack())
+					gl.glVertex3d(barylerp(vs,u+d,v-2*d,w+d):unpack())
+				end
+				if i<div-1 and j<div-1 then
+					gl.glColor3d(barylerp(colors,u+d,v+d,w-2*d):unpack())
+					gl.glVertex3d(barylerp(vs,u+d,v+d,w-2*d):unpack())			
+				end
+				--]]
+			end
+		end
+--]]
 	end
 	gl.glEnd()
 
