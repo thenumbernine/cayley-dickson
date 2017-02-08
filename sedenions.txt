@@ -276,41 +276,137 @@ looks like 1 2 4 6 8 A C E are mobius strips with interleave 0 0 1
 but maybe 3 5 7 9 B D F are something else, which is why their signs keep flipping?
 
 triplets rearranged, with mobius strips 1 2 4 6 8 A C E on the lhs:
-1 2 3       1 2             3             
-1 4 5       1   4             5           
-1 7 6       1     6             7         
+1 2 3       1 2                         3 
+1 4 5       1   4                     5   
+1 7 6       1     6                 7     
 2 4 6       1       8             9       
-2 5 7       1         A             B     
-3 4 7       1           C             D   
-3 6 5       1             E             F 
+2 5 7       1         A         B         
+3 4 7       1           C     D           
+3 6 5       1             E F             
 1 8 9         2 4 6                       
-1 B A         2               5 7         
+1 B A         2                     7 5   
 2 8 A         2     8 A                   
-2 9 B         2                   9 B     
+2 9 B         2                 B 9       
 3 8 B         2         C E               
-3 A 9         2                       D F 
-1 D C           4           3   7         
+3 A 9         2             F D           
+1 D C           4                   7   3 
 4 8 C           4   8   C                 
-4 9 D           4                 9   D   
+4 9 D           4             D   9       
 5 8 D           4     A   E               
-5 C 9           4                   B   F 
-1 E F             6         3 5           
+5 C 9           4           F   B         
+1 E F             6                   5 3 
 6 8 E             6 8     E               
-6 F 9             6               9     F 
+6 F 9             6         F     9       
 7 8 F             6   A C                 
-7 9 E             6                 B D   
-2 E C               8       3       B     
-4 A E               8         5       D   
-6 C A               8           7       F 
-2 F D                 A     3     9       
-5 A F                 A       5         F 
-7 D A                 A         7     D   
-3 F C                   C   3           F 
-4 B F                   C     5   9       
-7 C B                   C       7   B     
-3 D E                     E 3         D   
-5 E B                     E   5     B     
-6 B D                     E     7 9       
+7 9 E             6           D B         
+2 E C               8           B       3 
+4 A E               8         D       5   
+6 C A               8       F       7     
+2 F D                 A           9     3 
+5 A F                 A     F         5   
+7 D A                 A       D     7     
+3 F C                   C   F           3 
+4 B F                   C         9   5   
+7 C B                   C       B   7     
+3 D E                     E   D         3 
+5 E B                     E     B     5   
+6 B D                     E       9 7     
+
+triplets arranged into mobius strips of mobius strips:
+1 2 3       1 2 3        
+1 4 5       1     4 5    
+1 7 6       1         6 7
+2 4 6       1             8 9
+2 5 7       1                 A B
+3 4 7       1                     C D
+3 6 5       1                         E F
+1 8 9         2   4   6  
+1 B A         2     5   7
+2 8 A         2           8   A
+2 9 B         2             9   B
+3 8 B         2                   C   E
+3 A 9         2                     D   F
+1 D C           3 4     7
+1 E F           3   5 6
+2 E C           3         8     B
+2 F D           3           9 A
+3 D E           3                   D E
+3 F C           3                 C     F
+4 8 C             4       8       C
+4 9 D             4         9       D
+5 8 D             4           A       E
+5 C 9             4             B       F
+4 A E               5     8         D
+4 B F               5       9     C
+5 A F               5         A         F
+5 E B               5           B     E
+6 8 E                 6   8           E
+6 F 9                 6     9           F
+7 8 F                 6       A   C
+7 9 E                 6         B   D
+6 B D                   7   9         E
+6 C A                   7 8             F
+7 C B                   7       B C
+7 D A                   7     A     D
+
+so each number shows up each ring 3x ...
+(similar to how each triplet shows upin each ring 3x ...)
+e:		ring #s e is present: 
+1		1	2	3	4	5	6	7
+2		1	2	3	8	9	A	B
+3		1	2	3	C	D	E	F
+4		1	4	5	8	9	C	D
+5		1	4	5	A	B	E	F
+6		1	6	7	8	9	E	F
+7		1	6	7	A	B	C	D
+8		2	4	6	8	A	C	E
+9		2	4	6	9	B	D	F
+A		2	5	7	8	A	D	F
+B		2	5	7	9	B	C	E
+C		3	4	7	8	B	C	F
+D		3	4	7	9	A	D	E
+E		3	5	6	8	B	D	E
+F		3	5	6	9	A	C	F
+
+
+each of these pairs of e's have a triplet of rings in common:
+	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F
+1		123	123	145	145	167	167	246	246	257	257	347	347	356	356
+2	123		123	189	1AB	189	1AB	28A	29B	28A	29B	38B	39A	38B	39A
+3	123	123		1CD	1EF	1EF	1CD	2CE	2DF	2DF	2CE	3CF	3DE	3DE	3CF
+4	145	189	1CD		145	189	1CD	48C	49D	58D	59C	48C	49D	58D	59C
+5	145	1AB	1EF	145		1EF	1AB	4AE	4BF	5AF	5BE	4BF	4AE	5BE	5AF
+6	167	189	1EF	189	1EF		167	68E	69F	78F	79E	78F	79E	68E	69F
+7	167	1AB	1CD	1CD	1AB	167		6AC	6BD	7AD	7BC	7BC	7AD	6BD	6AC
+8	246	28A	2CE	48C	4AE	68E	6AC		246	28A	2CE	48C	4AE	68E	6AC
+9	246	29B	2DF	49D	4BF	69F	6BD	246		2DF	29B	4BF	49D	6BD	69F
+A	257	28A	2DF	58D	5AF	78F	7AD	28A	2DF		257	78F	7AD	58D	5AF
+B	257	29B	2CE	59C	5BE	79E	7BC	2CE	29B	257		7BC	79E	5BE	59C
+C	347	38B	3CF	48C	4BF	78F	7BC	48C	4BF	78F	7BC		347	38B	3CF
+D	347	39A	3DE	49D	4AE	79E	7AD	4AE	49D	7AD	79E	347		3DE	39A
+E	356	38B	3DE	58D	5BE	68E	6BD	68E	6BD	58D	5BE	38B	3DE		356
+F	356	39A	3CF	59C	5AF	69F	6AC	6AC	69F	5AF	59C	3CF	39A	356
+
+so the triplets of rings are isomorphic to the triplets of e's
+...therefore??? the 15 rings are isomorphic to the 15 e's ?
+
+rearranging e's found in rings:
+1		1	2	3	4	5	6	7
+2		1	2	3	8	9	A	B
+3		1	2	3	C	D	E	F
+4		1			4	5	8	9	C	D
+5		1			4	5	A	B	E	F
+6		1		6	7	8	9	E	F
+7		1		6	7	A	B	C	D
+8			2	4	6	8	A	C	E
+9			2	4	6	9	B	D	F
+A			2	5	7	8	A	D	F
+B			2	5	7	9	B	C	E
+C			3	4	7	8	B	C	F
+D			3	4	7	9	A	D	E
+E			3	5	6	8	B	D	E
+F			3	5	6	9	A	C	F
+
 
 all triplets together:
 1 2   3
