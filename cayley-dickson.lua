@@ -37,12 +37,36 @@ local Element = class()
 
 function Element:init(args)
 	assert(args)
+	self.table = assert(args.table)
 	self.index = assert(args.index)
 	self.negative = not not args.negative
 end
+
+function Element.__mul(a,b)
+	local negative = a.negative ~= b.negative
+	local t = a.table
+	local c = t[a.index+1][b.index+1]
+	return t:element{
+		index = c.index,
+		negative = negative ~= c.negative,
+	}
+end
+
+function Element.__unm(a)
+	return a.table:element{
+		index = a.index,
+		negative = not a.negative,
+	}
+end
+
+function Element.__eq(a,b)
+	return a.index == b.index and (not not a.negative) == (not not b.negative)
+end
+
 function Element:__tostring()
 	return (self.negative and '-' or '') .. 'e' .. self.index
 end
+
 Element.__concat = defaultConcat
 
 
@@ -53,12 +77,16 @@ function CayleyDickson:init(n)
 	for i=1,x do
 		self[i] = {}
 		for j=1,x do
-			self[i][j] = Element{
+			self[i][j] = self:element{
 				index = bit.bxor(i-1,j-1),
 				negative = negative(i-1,j-1,x),
 			}
 		end
 	end
+end
+
+function CayleyDickson:element(args)
+	return Element(table(args, {table=self}))
 end
 
 function CayleyDickson:__tostring()
@@ -99,9 +127,9 @@ function CayleyDickson:getTriplets()
 				if not foundSet[key] then
 					foundSet[key] = true
 					found:insert{
-						Element{index=i},
-						Element{index=j},
-						Element{index=k},
+						self:element{index=i},
+						self:element{index=j},
+						self:element{index=k},
 					}
 				end
 			end

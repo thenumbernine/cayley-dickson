@@ -545,3 +545,76 @@ F	XXX	XXX	...	XXX	...	...	XXX	XXX	...	...	XXX	...	XXX	XXX
 
 what if I rename the rings, to try and find that isomorphism:
 take note that depending on how they are rearranged, they might not reproduce the original triplets.
+
+
+				imaginary				mobius
+				elements:	triplets:	strips:		next:		next:
+complex:		1
+quaternions:	3			1
+octonions:		7			7			1
+sedenions:		15			35			15			1
+next:			31			x			x			31			1
+
+
+
+all rings:
+	single rings:
+ring #1:1 2 5   3 7       6      -4
+ring #A:  2 5 8   7 D       -F      A
+ring #E:    5 8 3   D -B       E      6
+ring #C:      8 3 7   -B         -4     C   -F
+8 3 . -B  . .  .
+. 3 7  . -4 .  .
+. . 7 -B  . C  .
+. . . -B -4 . -F
+8 . .  . -4 C  .
+. 3 .  .  . C -F
+8 . 7  .  . . -F
+
+ring #4: 1 4 8 5 C D 9
+ring #6: 1 7 8 6 F E 9
+ring #8: 2 4 8 6 C E A
+ring #2: 1 2 8 3 A B 9
+	double rings with signs flip:
+ring #3: 1 2 E 3 C D F
+ring #5: 1 4 A 5 E F B 
+ring #7: 1 7 C 6 B A D 
+ring #9: 2 4 9 6 D F B 
+ring #B: 2 5 C 7 9 B E 
+ring #D: 3 4 A 7 E D 9 
+ring #F: 3 6 C 5 A 9 F 
+
+tada!  
+1 2 5   3 7     4   6         
+  2 5 8   7 D     A   F       
+    5 8 3   D B     6   E     
+      8 3 7   B 4     F   C   
+        3 7 D   4 A     E   9  
+1         7 D B   A 6     C   
+  2         D B 4   6 F     9  
+1   5         B 4 A   F E     
+  2   8         4 A 6   E C   
+    5   3         A 6 F   C 9  
+1     8   7         6 F E   9  
+1 2     3   D         F E C   
+  2 5     7   B         E C 9  
+1   5 8     D   4         C 9  
+1 2   8 3     B   A         9  
+
+now for matching up the signs... note the 6th and 7th elements of the rings are switched
+ring #1: +1 +2 +5    +3 +7       -4    +6             
+ring #A:    +2 +5 +8    +7 +D       +A    -F          
+ring #E:       +5 +8 +3    +D -B       +6    +E       
+ring #C:          +8 +3 +7    -B -4       -F    +C    
+ring #D:             +3 +7 +D    -4 +A       -E    -9             -3 +7 +D    +4 +A       +E    +9
+ring #7:  1             +7 +D -B    +A +6       +C    -1             -7 +D +B    -A -6       +C    -1
+ring #9:     2             +D -B -4    +6 -F       -9    -2             -D +B +4    +6 -F       -9    +2
+ring #5:  1     5             -B -4 +A    -F -E       -1    -5             -B +4 +A    +F +E       -1    +5
+ring #8:     2     8             -4 +A +6    -E +C       -2    +8
+ring #F:        5     3             +A +6 -F    +C -9       -5    -3             +A -6 -F    -C +9       -5    +3
+ring #6:  1        8     7             +6 -F -E    -9 -1       +8    -7
+ring #3:  1  2        3     D             -F -E +C    -1 -2       +3    -D             -F +E -C    +1 -2       -3    -D
+ring #B:     2  5        7     B             -E +C -9    -2 -5       +7    -B             -E -C +9    +2 -5       -7    -B
+ring #4:  1     5  8        D     4             +C -9 -1    -5 +8       -D    -4
+ring #2:  1  2     8  3        B     A             -9 -1 -2    +8 +3       -B    -A
+
