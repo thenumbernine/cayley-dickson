@@ -187,7 +187,7 @@ function App:update()
 			end
 		end
 		
-		local f = R(0,0,1,v*2*math.pi) * (R(0,1,0,v*math.pi) * symvec(0,0,width*(2*u-1)) + symvec(radius,0,0))
+		local f = R(0,0,1,u*2*math.pi) * (R(0,1,0,u*math.pi) * symvec(0,0,width*(2*v-1)) + symvec(radius,0,0))
 		f = f()
 		self.f_fn = symVecToLua(f)
 		
@@ -204,16 +204,16 @@ function App:update()
 		self.n_fn = symVecToLua(n)
 	end
 
-	local idiv = 10
-	local jdiv = 100
+	local idiv = 100
+	local jdiv = 10
 	self.mobiusShader:use()
 	self.mobiusTex:bind()
-	for j=1,jdiv do
+	for i=0,idiv do
 		gl.glBegin(gl.GL_TRIANGLE_STRIP)
-		for i=0,idiv do
-			for jofs=0,1 do
-				local u = i/idiv
-				local v = (j+jofs)/jdiv
+		for j=1,jdiv do
+			for iofs=0,1 do
+				local u = (i+iofs)/idiv
+				local v = j/jdiv
 				gl.glTexCoord2d(u,v)
 				gl.glNormal3d(self.n_fn(u,v))
 				gl.glVertex3d(self.f_fn(u,v))
@@ -230,7 +230,7 @@ function App:update()
 	gl.glColor3d(1,1,1)
 	gl.glBegin(gl.GL_POINTS)
 	for i=1,7 do
-		gl.glVertex3d(self.f_fn(0, 2*i/7))
+		gl.glVertex3d(self.f_fn(2*i/7, 0))
 	end
 	gl.glEnd()
 	gl.glEnable(gl.GL_DEPTH_TEST)
@@ -241,8 +241,8 @@ function App:update()
 	gl.glBegin(gl.GL_LINES)
 	for i=1,7 do
 		local u = 2*i/7
-		local v = vec3(self.f_fn(.5, u))
-		local n = vec3(self.n_fn(.5, u))
+		local v = vec3(self.f_fn(u, .5))
+		local n = vec3(self.n_fn(u, .5))
 		gl.glVertex3d(v:unpack())
 		gl.glVertex3d((v+n*.5):unpack())
 	end
