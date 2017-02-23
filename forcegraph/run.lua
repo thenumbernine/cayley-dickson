@@ -1,5 +1,6 @@
 #!/usr/bin/env luajit
 require 'ext'
+local ffi = require 'ffi'
 local bit = require 'bit'
 local vec3 = require 'vec.vec3'
 local sdl = require 'ffi.sdl'
@@ -7,13 +8,15 @@ local gl = require 'ffi.OpenGL'
 local quat = require 'vec.quat'
 local Mouse = require 'gui.mouse'
 local CayleyDickson = require 'cayley-dickson'
+local GLTex2D = require 'gl.tex2d'
+local GLProgram = require 'gl.program'
 
 local mouse = Mouse()
 local viewAngle = quat()
 
 local App = class(require 'glapp')
 
-App.title = 'Force Directed Graph'
+App.title = 'Cayley-Dickson Mobius Renderer'
 
 function App:initGL()
 	gl.glEnable(gl.GL_DEPTH_TEST)
@@ -56,6 +59,57 @@ function App:initGL()
 	end
 
 	self.triplets = self.c:getTriplets()
+
+	self.mobiusTex = GLTex2D{
+		width = 8,
+		height = 1,
+		format = gl.GL_RGB,
+		internalFormat = gl.GL_RGB,
+		type = gl.GL_UNSIGNED_BYTE,
+		data = ffi.new('unsigned char[24]', {
+			255,0,0,
+			255,127,0,
+			255,255,0,
+			0,255,0,
+			0,255,255,
+			0,0,255,
+			255,0,255,
+			255,0,0
+		}),
+		minFilter = gl.GL_NEAREST,
+		magFilter = gl.GL_NEAREST,
+	}
+
+	self.mobiusShader = GLProgram{
+		vertexCode = [[
+varying vec2 tc;
+varying vec3 n;
+void main() {
+	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex; 
+	n = (gl_ModelViewMatrix * vec4(gl_Normal, 0.)).xyz;
+	tc = gl_MultiTexCoord0.st;
+}
+]],
+		fragmentCode = [[
+#version 130
+varying vec2 tc;
+varying vec3 n;
+uniform sampler2D tex;
+void main() {
+	float u = tc.s;
+	float v = tc.t * .5;
+	float v7 = v * 7. - u * .5 + 1.;
+	if (mod(v7, 1.) + u > 1.) {
+		v += .5;
+		u = 1. - u;
+		v7 = v * 7. - u * .5 + 1.;
+	}
+	float l = abs(n.z);
+	gl_FragColor = l * texture2D(tex, vec2( (floor(v7) + .5) / 8., .5));
+}
+]],
+		uniforms = {tex = 0},
+	}
 end
 
 local function barylerp(vs, u,v,w)
@@ -102,6 +156,99 @@ function App:update()
 	local aa = viewAngle:conjugate():toAngleAxis()
 	gl.glRotatef(aa[4], aa[1], aa[2], aa[3])
 
+-- [[ draw mobius strip
+	local radius = 1
+	local width = .2
+
+	if not self.f_fn then
+		local symmath = require 'symmath'
+		local x,y,z = symmath.vars('x', 'y', 'z')
+		local xs = {x,y,z}
+		local u = symmath.var('u', xs)
+		local v = symmath.var('v', xs)
+
+		local symvec = function(...) return symmath.Matrix{...}:transpose() end
+		local function R(x,y,z,theta)
+			local N = symmath.Matrix(
+				{0, -z, y},
+				{z, 0, -x},
+				{-y, x, 0})
+			return symmath.Matrix.identity(3) + (symmath.sin(theta) + (1 - symmath.cos(theta)) * N) * N
+		end
+		local function symVecToLua(p)
+			local n = #p
+			local fns = range(#p):map(function(i)
+				return (p[i][1]:compile{u,v})
+			end)
+			return function(u,v)
+				return range(n):map(function(i)
+					return (fns[i](u,v))
+				end):unpack()
+			end
+		end
+		
+		local f = R(0,0,1,v*2*math.pi) * (R(0,1,0,v*math.pi) * symvec(0,0,width*(2*u-1)) + symvec(radius,0,0))
+		f = f()
+		self.f_fn = symVecToLua(f)
+		
+		local df_du = f:diff(u)()
+		local df_dv = f:diff(v)()
+		local n = symvec( range(3):map(function(i)
+			local j = i%3+1
+			local k = j%3+1
+			return df_du[j][1] * df_dv[k][1] - df_du[k][1] * df_dv[j][1]
+		end):unpack() )
+		n = n()
+		local nlen = symmath.sqrt(n[1][1]^2 + n[2][1]^2 + n[3][1]^2)
+		n = (n / nlen)()
+		self.n_fn = symVecToLua(n)
+	end
+
+	local idiv = 10
+	local jdiv = 100
+	self.mobiusShader:use()
+	self.mobiusTex:bind()
+	for j=1,jdiv do
+		gl.glBegin(gl.GL_TRIANGLE_STRIP)
+		for i=0,idiv do
+			for jofs=0,1 do
+				local u = i/idiv
+				local v = (j+jofs)/jdiv
+				gl.glTexCoord2d(u,v)
+				gl.glNormal3d(self.n_fn(u,v))
+				gl.glVertex3d(self.f_fn(u,v))
+			end
+		end
+		gl.glEnd()
+	end
+	self.mobiusTex:unbind()
+	self.mobiusShader:useNone()
+
+	-- draw points at vertexes
+	gl.glPointSize(5)
+	gl.glDisable(gl.GL_DEPTH_TEST)
+	gl.glColor3d(1,1,1)
+	gl.glBegin(gl.GL_POINTS)
+	for i=1,7 do
+		gl.glVertex3d(self.f_fn(0, 2*i/7))
+	end
+	gl.glEnd()
+	gl.glEnable(gl.GL_DEPTH_TEST)
+	gl.glPointSize(1)
+
+	-- draw normal lines
+	gl.glColor3d(0,1,1)
+	gl.glBegin(gl.GL_LINES)
+	for i=1,7 do
+		local u = 2*i/7
+		local v = vec3(self.f_fn(.5, u))
+		local n = vec3(self.n_fn(.5, u))
+		gl.glVertex3d(v:unpack())
+		gl.glVertex3d((v+n*.5):unpack())
+	end
+	gl.glEnd()
+--]]
+--[==[
 	local colors = {
 		vec3(1,0,0),
 		vec3(0,1,0),
@@ -117,7 +264,7 @@ function App:update()
 			gl.glVertex3d(self.vtxs[triplet[j].index].pos:unpack())
 		end
 --]]
--- [[ draw tesselated triangles
+-- [=[ draw tesselated triangles
 		local vs = range(3):map(function(i) return self.vtxs[triplet[i].index].pos end)
 		local div = 5
 		local d = 1/div
@@ -160,9 +307,10 @@ function App:update()
 				--]]
 			end
 		end
---]]
+--]=]
 	end
 	gl.glEnd()
+--]==]
 
 	--[[ push vertices away from each other
 	local coeff = .001

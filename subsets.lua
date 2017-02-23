@@ -98,6 +98,7 @@ for i=1,7 do
 			--print(indexes:concat', ','\t', cmpForSub:map(tostring):concat', ')
 		end
 		io.write('\t',count)
+		io.flush()
 	end
 	print()
 end
