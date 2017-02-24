@@ -10,10 +10,12 @@ local Mouse = require 'gui.mouse'
 local CayleyDickson = require 'cayley-dickson'
 local GLTex2D = require 'gl.tex2d'
 local GLProgram = require 'gl.program'
+local glCallOrRun = require 'gl.call'
 
 local mouse = Mouse()
 local viewAngle = quat()
 
+local app	-- running singleton
 local App = class(require 'glapp')
 
 App.title = 'Cayley-Dickson Mobius Renderer'
@@ -91,20 +93,44 @@ void main() {
 }
 ]],
 		fragmentCode = [[
-#version 130
 varying vec2 tc;
 varying vec3 n;
 uniform sampler2D tex;
 void main() {
 	float u = tc.s;
 	float v = tc.t * .5;
+#if 0	//if the spacing of the mobius was 0 1 2	
 	float v7 = v * 7. - u * .5 + 1.;
 	if (mod(v7, 1.) + u > 1.) {
 		v += .5;
 		u = 1. - u;
 		v7 = v * 7. - u * .5 + 1.;
 	}
-	float l = abs(n.z);
+#endif
+#if 1	//with the 0 1 3 spacing 
+	if (gl_FrontFacing) {
+		v += .5;
+		u = 1. - u;
+	}
+	float v7 = v * 7. + u * .5;
+	if (mod(v7, 1.) + u > 1.) {
+		//calculate the back:
+		u = tc.s;
+		v = tc.t * .5;
+		if (!gl_FrontFacing) {
+			v += .5;
+			u = 1. - u;
+		}
+		v7 = v * 7. + u * .5;
+		if (mod(v7, 1.) + u > 1.) {
+			discard;
+		}
+	}
+#endif
+	float l = n.z;
+	if (gl_FrontFacing) l = -l;
+	l = max(.1, l);
+	l = 1.;
 	gl_FragColor = l * texture2D(tex, vec2( (floor(v7) + .5) / 8., .5));
 }
 ]],
@@ -124,6 +150,146 @@ local function barylerp(vs, u,v,w)
 		vs[1]:length() * u + vs[2]:length() * v + vs[3]:length() * w
 	)
 --]]
+end
+
+local MobiusBand = class()
+
+function MobiusBand:init(args)
+	args = args or {}
+	local deformations = args.deformations
+	local width = args.width or .4
+	local radius = args.radius or 1
+	
+	local symmath = require 'symmath'
+	local x,y,z = symmath.vars('x', 'y', 'z')
+	local xs = {x,y,z}
+	local u = symmath.var('u', xs)
+	local v = symmath.var('v', xs)
+
+	local symvec = function(...) return symmath.Matrix{...}:transpose() end
+	local function R(x,y,z,theta)
+		local N = symmath.Matrix(
+			{0, -z, y},
+			{z, 0, -x},
+			{-y, x, 0})
+		return symmath.Matrix.identity(3) + (symmath.sin(theta) + (1 - symmath.cos(theta)) * N) * N
+	end
+	local function symVecToLua(p)
+		local n = #p
+		local fns = range(#p):map(function(i)
+			return (p[i][1]:compile{u,v})
+		end)
+		return function(u,v)
+			return range(n):map(function(i)
+				return (fns[i](u,v))
+			end):unpack()
+		end
+	end
+
+	local function lenSq(p)
+		p = p()
+		assert(symmath.Matrix.is(p))
+		return range(#p):map(function(i)
+			return p[i][1]^2
+		end):sum()
+	end
+
+	local function deform(p)
+		p = p()
+		local orig_p = p
+		if deformations then
+			for _,def in ipairs(deformations) do
+				-- deform f from def.from to def.to
+				local from = symvec(table.unpack(def.from))
+				local to = symvec(table.unpack(def.to))
+				p = p + (to - from) * symmath.exp(-def.infl * lenSq(orig_p - from))
+				p = p()
+			end
+		end
+		return p	
+	end
+
+	local f = R(0,0,1,v*2*math.pi) * (R(0,1,0,v*math.pi) * symvec(0,0,width*(2*u-1)) + symvec(radius,0,0))
+	f = f()
+	local orig_f = f
+	f = deform(f)
+	local f_fn = symVecToLua(f)
+
+	-- [[ normals computed:
+	local df_du = orig_f:diff(u)()
+	local df_dv = orig_f:diff(v)()
+	local n = symvec( range(3):map(function(i)
+		local j = i%3+1
+		local k = j%3+1
+		return df_du[j][1] * df_dv[k][1] - df_du[k][1] * df_dv[j][1]
+	end):unpack() )
+	n = n()
+	n = deform(n)
+	local nlen = symmath.sqrt(lenSq(n))
+	n = (n / nlen)()
+	local n_fn = symVecToLua(n)
+	--]]
+	self.f_fn = f_fn
+	self.n_fn = n_fn
+end
+	
+-- i is 1 through n
+-- n is the # of vertexes in the mobius strip (an odd #)
+local function vForMobiusVertex(i, n)
+	local up = bit.band(i, 1)
+	local j = bit.rshift(i, 1)
+	return 2*(j-1 + up*.5)/n + up
+end
+
+function MobiusBand:draw()
+	app.mobiusShader:use()
+	app.mobiusTex:bind()
+	self.mobiusList = self.mobiusList or {}
+	glCallOrRun(self.mobiusList, function()
+		local idiv = 100
+		local jdiv = 1000
+		for j=1,jdiv do
+			gl.glBegin(gl.GL_TRIANGLE_STRIP)
+			for i=0,idiv do
+				for jofs=0,1 do
+					local u = i/idiv
+					local v = (j+jofs)/jdiv
+					gl.glTexCoord2d(u,v)
+					gl.glNormal3d(self.n_fn(u,v))
+					gl.glVertex3d(self.f_fn(u,v))
+				end
+			end
+			gl.glEnd()
+		end
+	end)
+	app.mobiusTex:unbind()
+	app.mobiusShader:useNone()
+
+	-- draw points at vertexes
+	gl.glPointSize(5)
+	gl.glDisable(gl.GL_DEPTH_TEST)
+	gl.glColor3d(1,1,1)
+	gl.glBegin(gl.GL_POINTS)
+	for i=1,7 do
+		local v = vForMobiusVertex(i, 7)
+		gl.glVertex3d(self.f_fn(0, v))
+	end
+	gl.glEnd()
+	gl.glEnable(gl.GL_DEPTH_TEST)
+	gl.glPointSize(1)
+
+	--[[ draw normal lines
+	gl.glColor3d(0,1,1)
+	gl.glBegin(gl.GL_LINES)
+	for i=1,7 do
+		local u = 2*i/7
+		local v = vec3(self.f_fn(.5, u))
+		local n = vec3(self.n_fn(.5, u))
+		gl.glVertex3d(v:unpack())
+		gl.glVertex3d((v+n*.5):unpack())
+	end
+	gl.glEnd()
+	--]]
 end
 
 function App:update()
@@ -157,96 +323,56 @@ function App:update()
 	gl.glRotatef(aa[4], aa[1], aa[2], aa[3])
 
 -- [[ draw mobius strip
-	local radius = 1
-	local width = .2
 
-	if not self.f_fn then
-		local symmath = require 'symmath'
-		local x,y,z = symmath.vars('x', 'y', 'z')
-		local xs = {x,y,z}
-		local u = symmath.var('u', xs)
-		local v = symmath.var('v', xs)
+	if not self.mobiusRings then
+		-- [[ typical mobius ring:
+		self.mobiusRings = table{MobiusBand()}
+		--]]
+		--[[ 7-vertex ring with pts 6 and 7 exchanged
+		local bigRing = MobiusBand()
+		local pts = range(7):map(function(i)
+			return vec3(bigRing.f_fn(0, vForMobiusVertex(i, 7)))
+		end)
 
-		local symvec = function(...) return symmath.Matrix{...}:transpose() end
-		local function R(x,y,z,theta)
-			local N = symmath.Matrix(
-				{0, -z, y},
-				{z, 0, -x},
-				{-y, x, 0})
-			return symmath.Matrix.identity(3) + (symmath.sin(theta) + (1 - symmath.cos(theta)) * N) * N
-		end
-		local function symVecToLua(p)
-			local n = #p
-			local fns = range(#p):map(function(i)
-				return (p[i][1]:compile{u,v})
-			end)
-			return function(u,v)
-				return range(n):map(function(i)
-					return (fns[i](u,v))
-				end):unpack()
-			end
-		end
+		self.mobiusRings = table{MobiusBand{
+			deformations = {
+				{from=pts[7], to=pts[6], infl=10},
+				{from=pts[6], to=pts[7], infl=10},
+			},
+		}}
+		--]]
+		--[[ sedenions -- ring of rings
+		local smallRing = MobiusBand()
+		local smallPts = range(7):map(function(i)
+			return vec3(smallRing.f_fn(0, vForMobiusVertex(i, 7)))
+		end)
 		
-		local f = R(0,0,1,u*2*math.pi) * (R(0,1,0,u*math.pi) * symvec(0,0,width*(2*v-1)) + symvec(radius,0,0))
-		f = f()
-		self.f_fn = symVecToLua(f)
-		
-		local df_du = f:diff(u)()
-		local df_dv = f:diff(v)()
-		local n = symvec( range(3):map(function(i)
-			local j = i%3+1
-			local k = j%3+1
-			return df_du[j][1] * df_dv[k][1] - df_du[k][1] * df_dv[j][1]
-		end):unpack() )
-		n = n()
-		local nlen = symmath.sqrt(n[1][1]^2 + n[2][1]^2 + n[3][1]^2)
-		n = (n / nlen)()
-		self.n_fn = symVecToLua(n)
+		local bigRing = MobiusBand()
+		local bigPts = range(15):map(function(i)
+			return vec3(bigRing.f_fn(0, vForMobiusVertex(i, 15)))
+		end)
+	
+		local offsets = {0,1,2,4,5,8,10}
+		self.mobiusRings = range(15):map(function(i)
+			return MobiusBand{
+				deformations = range(7):map(function(j)
+					return {
+						from = smallPts[j],
+						to = bigPts[(i-1+offsets[j])%15 + 1],
+						infl = 1,
+					}
+				end),
+			}
+		end)
+		--]]
 	end
 
-	local idiv = 100
-	local jdiv = 10
-	self.mobiusShader:use()
-	self.mobiusTex:bind()
-	for i=0,idiv do
-		gl.glBegin(gl.GL_TRIANGLE_STRIP)
-		for j=1,jdiv do
-			for iofs=0,1 do
-				local u = (i+iofs)/idiv
-				local v = j/jdiv
-				gl.glTexCoord2d(u,v)
-				gl.glNormal3d(self.n_fn(u,v))
-				gl.glVertex3d(self.f_fn(u,v))
-			end
-		end
-		gl.glEnd()
-	end
-	self.mobiusTex:unbind()
-	self.mobiusShader:useNone()
+	for _,ring in ipairs(self.mobiusRings) do ring:draw() end
 
-	-- draw points at vertexes
-	gl.glPointSize(5)
-	gl.glDisable(gl.GL_DEPTH_TEST)
-	gl.glColor3d(1,1,1)
-	gl.glBegin(gl.GL_POINTS)
-	for i=1,7 do
-		gl.glVertex3d(self.f_fn(2*i/7, 0))
-	end
-	gl.glEnd()
-	gl.glEnable(gl.GL_DEPTH_TEST)
-	gl.glPointSize(1)
-
-	-- draw normal lines
-	gl.glColor3d(0,1,1)
-	gl.glBegin(gl.GL_LINES)
-	for i=1,7 do
-		local u = 2*i/7
-		local v = vec3(self.f_fn(u, .5))
-		local n = vec3(self.n_fn(u, .5))
-		gl.glVertex3d(v:unpack())
-		gl.glVertex3d((v+n*.5):unpack())
-	end
-	gl.glEnd()
+	-- now for making rings-of-rings ...
+	-- I need a spatial deformation function ...
+	-- so I can map points on the small ring to points on the big ring
+	
 --]]
 --[==[
 	local colors = {
@@ -352,4 +478,5 @@ function App:event(event)
 	end
 end
 
-App():run()
+app = App()
+app:run()
