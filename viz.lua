@@ -79,7 +79,7 @@ function App:initGL()
 			255,0,0
 		}),
 		minFilter = gl.GL_NEAREST,
-		magFilter = gl.GL_NEAREST,
+		magFilter = gl.GL_LINEAR,
 	}
 
 	self.mobiusShader = GLProgram{
@@ -96,6 +96,8 @@ void main() {
 varying vec2 tc;
 varying vec3 n;
 uniform sampler2D tex;
+uniform float texSize;
+uniform float colorOffset;
 void main() {
 	float u = tc.s;
 	float v = tc.t * .5;
@@ -114,6 +116,7 @@ void main() {
 	}
 	float v7 = v * 7. + u * .5;
 	if (mod(v7, 1.) + u > 1.) {
+		
 		//calculate the back:
 		u = tc.s;
 		v = tc.t * .5;
@@ -130,11 +133,22 @@ void main() {
 	float l = n.z;
 	if (gl_FrontFacing) l = -l;
 	l = max(.1, l);
-	l = 1.;
-	gl_FragColor = l * texture2D(tex, vec2( (floor(v7) + .5) / 8., .5));
+l = 1.;
+
+	l *= u;
+	l *= 1. - u;
+	l *= max(0., 1. - (mod(v7,1.) + u));
+	l *= 6.;
+	l = sqrt(l);
+
+	gl_FragColor = l * texture2D(tex, vec2( (floor(v7) + .5) / texSize + colorOffset, .5));
 }
 ]],
-		uniforms = {tex = 0},
+		uniforms = {
+			tex = 0,
+			texSize = 8,
+			colorOffset = 0,
+		},
 	}
 end
 
@@ -154,12 +168,15 @@ end
 
 local MobiusBand = class()
 
+local useDeformSym = false
+local useDeformNum = true
 function MobiusBand:init(args)
 	args = args or {}
 	local deformations = args.deformations
 	local width = args.width or .4
 	local radius = args.radius or 1
-	
+	self.colorOffset = 0
+
 	local symmath = require 'symmath'
 	local x,y,z = symmath.vars('x', 'y', 'z')
 	local xs = {x,y,z}
@@ -194,12 +211,13 @@ function MobiusBand:init(args)
 		end):sum()
 	end
 
-	local function deform(p)
+	-- deform symbolic-generation
+	local function deformSym(p)
 		p = p()
 		local orig_p = p
 		if deformations then
 			for _,def in ipairs(deformations) do
-				-- deform f from def.from to def.to
+				-- deformSym f from def.from to def.to
 				local from = symvec(table.unpack(def.from))
 				local to = symvec(table.unpack(def.to))
 				p = p + (to - from) * symmath.exp(-def.infl * lenSq(orig_p - from))
@@ -212,7 +230,7 @@ function MobiusBand:init(args)
 	local f = R(0,0,1,v*2*math.pi) * (R(0,1,0,v*math.pi) * symvec(0,0,width*(2*u-1)) + symvec(radius,0,0))
 	f = f()
 	local orig_f = f
-	f = deform(f)
+	if useDeformSym then f = deformSym(f) end
 	local f_fn = symVecToLua(f)
 
 	-- [[ normals computed:
@@ -224,13 +242,46 @@ function MobiusBand:init(args)
 		return df_du[j][1] * df_dv[k][1] - df_du[k][1] * df_dv[j][1]
 	end):unpack() )
 	n = n()
-	n = deform(n)
+	if useDeformSym then n = deformSym(n) end
 	local nlen = symmath.sqrt(lenSq(n))
 	n = (n / nlen)()
 	local n_fn = symVecToLua(n)
 	--]]
 	self.f_fn = f_fn
 	self.n_fn = n_fn
+
+	-- deform post-symbolic-generation
+	-- also normalize weights of deformation . 
+	-- NOTICE this means if you only pass one then *all* the shape will shift in that direction
+	-- I would like a deformation where, at distance zero, the current weight gets 100% and all others get 0%, and it is gradual between
+	local function deformNum(f)
+		return function(u,v)
+			local y = vec3(f(u,v))
+			if deformations then
+				local total = 0 
+				local totalV = vec3(0,0,0)
+				local weights = table()
+				local deltas = table()
+				for i,def in ipairs(deformations) do
+					-- deformSym f from def.from to def.to
+					local from = vec3(table.unpack(def.from))
+					local to = vec3(table.unpack(def.to))
+					local weight = math.exp(-def.infl * (y - from):lenSq())
+					weights[i] = weight
+					deltas[i] = to - from
+				end
+				local total = #deformations == 0 and 1 or weights:sum()
+				for i=1,#deformations do
+					y = y + deltas[i] * weights[i] / total
+				end
+			end
+			return y:unpack()
+		end
+	end
+	if useDeformNum then
+		self.f_fn = deformNum(self.f_fn)
+		self.n_fn = deformNum(self.n_fn)
+	end
 end
 	
 -- i is 1 through n
@@ -243,9 +294,11 @@ end
 
 function MobiusBand:draw()
 	app.mobiusShader:use()
+	gl.glUniform1f(app.mobiusShader.uniforms.colorOffset.loc, self.colorOffset)
 	app.mobiusTex:bind()
 	self.mobiusList = self.mobiusList or {}
 	glCallOrRun(self.mobiusList, function()
+		print('compiling draw list...')
 		local idiv = 100
 		local jdiv = 1000
 		for j=1,jdiv do
@@ -261,11 +314,12 @@ function MobiusBand:draw()
 			end
 			gl.glEnd()
 		end
+		print('...done compiling draw list')
 	end)
 	app.mobiusTex:unbind()
 	app.mobiusShader:useNone()
 
-	-- draw points at vertexes
+	--[[ draw points at vertexes
 	gl.glPointSize(5)
 	gl.glDisable(gl.GL_DEPTH_TEST)
 	gl.glColor3d(1,1,1)
@@ -277,6 +331,7 @@ function MobiusBand:draw()
 	gl.glEnd()
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glPointSize(1)
+	--]]
 
 	--[[ draw normal lines
 	gl.glColor3d(0,1,1)
@@ -324,24 +379,29 @@ function App:update()
 
 -- [[ draw mobius strip
 
-	if not self.mobiusRings then
-		-- [[ typical mobius ring:
-		self.mobiusRings = table{MobiusBand()}
+	if not self.mobiusBands then
+		--[[ typical mobius band:
+		self.mobiusBands = table{MobiusBand()}
 		--]]
-		--[[ 7-vertex ring with pts 6 and 7 exchanged
+		--[[ 7-vertex band with pts 6 and 7 exchanged
 		local bigRing = MobiusBand()
 		local pts = range(7):map(function(i)
 			return vec3(bigRing.f_fn(0, vForMobiusVertex(i, 7)))
 		end)
 
-		self.mobiusRings = table{MobiusBand{
-			deformations = {
-				{from=pts[7], to=pts[6], infl=10},
-				{from=pts[6], to=pts[7], infl=10},
-			},
+		local infl = 1
+		self.mobiusBands = table{MobiusBand{
+			deformations = range(7):map(function(j)
+				local to = ({[6] = 7, [7] = 6})[j] or j
+				return {
+					from = pts[j],
+					to = pts[to],
+					infl = infl,
+				}
+			end),
 		}}
 		--]]
-		--[[ sedenions -- ring of rings
+		-- [[ sedenions -- ring of bands
 		local smallRing = MobiusBand()
 		local smallPts = range(7):map(function(i)
 			return vec3(smallRing.f_fn(0, vForMobiusVertex(i, 7)))
@@ -353,7 +413,8 @@ function App:update()
 		end)
 	
 		local offsets = {0,1,2,4,5,8,10}
-		self.mobiusRings = range(15):map(function(i)
+		self.mobiusBands = range(15):map(function(i)
+			print('creating mobius band '..i..'...')
 			return MobiusBand{
 				deformations = range(7):map(function(j)
 					return {
@@ -365,9 +426,13 @@ function App:update()
 			}
 		end)
 		--]]
+	
+		for i,band in ipairs(self.mobiusBands) do
+			band.colorOffset = (i-1)/#self.mobiusBands/7
+		end
 	end
 
-	for _,ring in ipairs(self.mobiusRings) do ring:draw() end
+	for _,band in ipairs(self.mobiusBands) do band:draw() end
 
 	-- now for making rings-of-rings ...
 	-- I need a spatial deformation function ...
