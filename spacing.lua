@@ -19,12 +19,12 @@ local matrix = require 'matrix'
 local allSoFar = table()
 
 <? 
--- [=[ mobius strips in sedenions
+--[=[ mobius strips in sedenions
 local m = 3		-- number of elements in common
 local n = 7		-- size of subset to look for
 local p = 15	-- size of space to scan
 --]=]
---[=[
+-- [=[
 local m = 3
 local n = 3
 local p = 7
