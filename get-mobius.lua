@@ -127,12 +127,14 @@ local initM = table{...}:map(function(i)
 	return e
 end)
 
+local dontOmitIsomorphisms = false
+
 local function mobiusStrips()
 	local all = table()
 	local uniqueset = table()
 	for m in fillMobius(initM:unpack()) do
 		local key = m:map(function(e) return e.index end):sort():concat'_'
-		if not uniqueset[key] then
+		if dontOmitIsomorphisms or not uniqueset[key] then
 			all:insert(m)
 			uniqueset[key] = true
 		end
