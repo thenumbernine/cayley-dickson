@@ -16,6 +16,13 @@ local function shortname(e)
 end
 
 local allTriplets = c:getTriplets()
+
+print'triplets:'
+for i,t in ipairs(allTriplets) do
+	print('t'..i, table.unpack(t))
+end
+
+
 local function tripletsOf(e)
 	local ts = table()
 	for _,t in ipairs(allTriplets) do

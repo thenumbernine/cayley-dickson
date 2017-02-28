@@ -593,7 +593,7 @@ next:			31			x			x			31			1
 
 all rings:
 	single rings:
-ring #1: 1 2 5 3 7 6 -4
+ring #1: 1 2 4 3 6 -7 5
 ring #2: 1 2 8 3 A -B 9
 ring #4: 1 4 8 5 C -D 9
 ring #6: 1 7 8 6 F -E 9
@@ -607,7 +607,7 @@ ring #5: 1 4 A 5 E -F B -1 4 A -5 E F -B
 ring #7: 1 7 C 6 B -A D -1 7 C -6 B A -D
 ring #9: 2 4 9 6 D F -B -2 4 9 -6 D -F B
 ring #B: 2 5 C 7 9 -B E -2 5 C -7 9 B -E
-ring #D: 3 4 A 7 E D -9 -3 4 A -7 E -D 9
+ring #D: 3 4 9 7 E -D A -3 4 9 -7 E D -A
 ring #F: 3 6 C 5 A -9 F -3 6 C -5 A 9 -F
 
 here are all the possible offsets such that 7 elements within a 15x15 grid will share all triplets once:
@@ -644,6 +644,18 @@ this is using 0 1 2 4 5 8 10 offsets:
   2 5     7   B         E C 9  
 1   5 8     D   4         C 9  
 1 2   8 3     B   A         9  
+
+try again with the corrected ring indexing:
+ring #1: 1 2 4 . 3 6 . . -7  . 5
+ring #8: . 2 4 8 . 6 C . .  -E .  A
+ring #C: . . 4 8 3 . C -B .  . -F . 7
+3 4 8 7 C -F B 
+still suffers the same parity problem, the 6th and 7th need to be exchanged ..
+ring #1: 1 2 4 . 3 6 . . 5  . -7
+ring #8: . 2 4 8 . 6 C . .  A .  -E
+ring #C: . . 4 8 3 . C -B .  . -7 . -F
+maybe ring #1 should be rearranged?
+
 
 now for matching up the signs... note the 6th and 7th elements of the rings are switched
 ring #1: +1 +2 +5    +3 +7       -4    +6             
