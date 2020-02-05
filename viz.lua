@@ -6,17 +6,19 @@ local vec3 = require 'vec.vec3'
 local sdl = require 'ffi.sdl'
 local gl = require 'gl'
 local quat = require 'vec.quat'
-local Mouse = require 'gui.mouse'
+local GLApp = require 'glapp'
+local Mouse = require 'glapp.mouse'
 local CayleyDickson = require 'cayley-dickson'
 local GLTex2D = require 'gl.tex2d'
 local GLProgram = require 'gl.program'
 local glCallOrRun = require 'gl.call'
+local symmath = require 'symmath'
 
 local mouse = Mouse()
 local viewAngle = quat()
 
 local app	-- running singleton
-local App = class(require 'glapp')
+local App = class(GLApp)
 
 App.title = 'Cayley-Dickson Mobius Renderer'
 
@@ -177,7 +179,6 @@ function MobiusBand:init(args)
 	local radius = args.radius or 1
 	self.colorOffset = 0
 
-	local symmath = require 'symmath'
 	local x,y,z = symmath.vars('x', 'y', 'z')
 	local xs = {x,y,z}
 	local u = symmath.var('u', xs)
@@ -351,12 +352,12 @@ function App:update()
 	mouse:update()
 	if mouse.leftDragging then
 		if leftShiftDown or rightShiftDown then
-			viewDist = viewDist * math.exp(10 * mouse.deltaPos[2])
+			viewDist = viewDist * math.exp(10 * mouse.deltaPos.y)
 		else
 			local magn = mouse.deltaPos:length() * 1000
 			if magn > 0 then
 				local normDelta = mouse.deltaPos / magn
-				local r = quat():fromAngleAxis(-normDelta[2], normDelta[1], 0, -magn)
+				local r = quat():fromAngleAxis(-normDelta.y, normDelta.x, 0, -magn)
 				viewAngle = (viewAngle * r):normalize()
 			end
 		end
