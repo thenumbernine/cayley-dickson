@@ -4,8 +4,9 @@ local bit = require 'bit'
 local table = require 'ext.table'
 local CayleyDickson = require 'cayley-dickson'
 
+local max = assert(tonumber(... or 5))
 local cayleyDicksonTables = table()
-for i=0,5 do
+for i=0,max do
 	print('table '..i)
 	local c = CayleyDickson(i)
 	cayleyDicksonTables[i] = c
