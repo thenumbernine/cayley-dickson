@@ -206,7 +206,7 @@ function MobiusBand:init(args)
 
 	local function lenSq(p)
 		p = p()
-		assert(symmath.Matrix.is(p))
+		assert(symmath.Matrix:isa(p))
 		return range(#p):map(function(i)
 			return p[i][1]^2
 		end):sum()
