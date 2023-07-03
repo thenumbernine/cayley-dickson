@@ -545,4 +545,4 @@ function App:event(event)
 end
 
 app = App()
-app:run()
+return app:run()

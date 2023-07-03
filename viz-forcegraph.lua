@@ -30,4 +30,4 @@ local app = ForceDirectedGraph{
 	nodes = nodes,
 	weights = weights,
 }
-app:run()
+return app:run()
