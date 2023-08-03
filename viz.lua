@@ -151,7 +151,7 @@ l = 1.;
 			texSize = 8,
 			colorOffset = 0,
 		},
-	}
+	}:useNone()
 end
 
 local function barylerp(vs, u,v,w)
