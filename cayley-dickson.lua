@@ -7,6 +7,7 @@
 --]]
 local table = require 'ext.table'
 local class = require 'ext.class'
+local string = require 'ext.string'
 local bit = require 'bit'
 
 local function negative(i,j,x)
@@ -28,8 +29,6 @@ local function negative(i,j,x)
 	return sign 
 end
 
-
-local function defaultConcat(a,b) return tostring(a) .. tostring(b) end
 
 
 -- index and negative
@@ -67,7 +66,7 @@ function Element:__tostring()
 	return (self.negative and '-' or '') .. 'e' .. self.index
 end
 
-Element.__concat = defaultConcat
+Element.__concat = string.defaultConcat
 
 
 local CayleyDickson = class()
