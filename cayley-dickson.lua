@@ -66,7 +66,7 @@ function Element:__tostring()
 	return (self.negative and '-' or '') .. 'e' .. self.index
 end
 
-Element.__concat = string.defaultConcat
+Element.__concat = string.concat
 
 
 local CayleyDickson = class()
