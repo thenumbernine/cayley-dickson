@@ -3,6 +3,7 @@ local ffi = require 'ffi'
 local bit = require 'bit'
 local gl = require 'gl'
 local template = require 'template'
+local vec2f = require 'vec-ffi.vec2f'
 local vec3f = require 'vec-ffi.vec3f'
 local vec3d = require 'vec-ffi.vec3d'
 local quatd = require 'vec-ffi.quatd'
@@ -13,7 +14,7 @@ local GLSceneObject = require 'gl.sceneobject'
 local GLAttribute = require 'gl.attribute'
 local GLArrayBuffer = require 'gl.arraybuffer'
 
-local vector_vec3f = vector'vec3f_t'
+local vector_vec2f = vector'vec2f_t'
 
 require 'glapp.view'.useBuiltinMatrixMath = true
 
@@ -30,7 +31,7 @@ function App:initGL()
 
 	self.program = GLProgram{
 		vertexCode = self.shaderHeader..template[[
-in vec3 vertex;
+in vec2 vertex;
 out vec3 mvposv;
 uniform mat4 mvMat;
 uniform mat4 projMat;
@@ -64,10 +65,12 @@ void main() {
 }
 ]],
 		fragmentCode = self.shaderHeader..[[
-const vec4 color = vec4(1., 0., 0., 1.);
 in vec3 eyeposv;
 in vec3 mvposv;
 out vec4 fragColor;
+
+const vec4 color = vec4(1., 0., 0., 1.);
+
 void main() {
 	vec3 n = normalize(cross(dFdx(mvposv), dFdy(mvposv)));
 	fragColor = abs(n.z) * color;
@@ -75,20 +78,20 @@ void main() {
 ]],
 	}:useNone()
 
-	self.vertexCPU = vector_vec3f()
+	self.vertexCPU = vector_vec2f()
 
 	local n = 360
 	-- TODO why does emplace_back()[0] crash?
 	self.vertexCPU:resize(2 * (n+1))
 	for i=0,n do
 		for z=0,1 do
-			self.vertexCPU.v[z + 2 * i]:set(i/n, z, 0)
+			self.vertexCPU.v[z + 2 * i]:set(i/n, z)
 		end
 	end
 
 	local vertexCount = #self.vertexCPU
 	self.vertexGPU = GLArrayBuffer{
-		size = vertexCount * ffi.sizeof'vec3f_t',
+		size = vertexCount * ffi.sizeof(self.vertexCPU.T),
 		data = self.vertexCPU.v,
 	}:unbind()
 
