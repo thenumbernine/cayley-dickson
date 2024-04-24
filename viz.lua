@@ -244,8 +244,8 @@ function MobiusBand:init(args)
 	end):unpack() )
 	n = n()
 	if useDeformSym then n = deformSym(n) end
-	local nlen = symmath.sqrt(lenSq(n))
-	n = (n / nlen)()
+--	local nlen = symmath.sqrt(lenSq(n))
+--	n = (n / nlen)()
 	local n_fn = symVecToLua(n)
 	--]]
 	self.f_fn = f_fn
