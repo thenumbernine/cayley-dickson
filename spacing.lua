@@ -121,7 +121,7 @@ local range = require 'ext.range'
 for i=1,n do ?>
 for o<?=i?>=<?=i==1 and 0 or 'o'..(i-1)..'+1'?>,<?=i==1 and 0 or p-1?> do
 <? end ?>
-	local offsets = table{<?=range(n):map(function(i) return 'o'..i end):concat','?>}
+	local offsets = table{<?=range(n):mapi(function(i) return 'o'..i end):concat','?>}
 print(offsets:unpack())	
 	local m = matrix.zeros(<?=p?>,<?=p?>) 
 	local function _m(x) return (x-1)%<?=p?>+1 end
@@ -134,13 +134,13 @@ print(offsets:unpack())
 print(m)
 print(n)	
 	if n == check then
-		local expanded = range(<?=p?>):map(function(i)
+		local expanded = range(<?=p?>):mapi(function(i)
 			return offsets:find(i-1) and 'x' or '.'
 		end)
 		
 		local found = allSoFar:find(nil, function(sofar) 
 			for shift=0,<?=p-1?> do
-				local shifted = range(<?=p?>):map(function(i)
+				local shifted = range(<?=p?>):mapi(function(i)
 					return expanded[(i-1+shift)%<?=p?>+1]
 				end):concat()
 				if shifted == sofar.expanded:concat() then return true end 
@@ -161,7 +161,7 @@ print(n)
 <? for i=1,n do ?>
 end
 <? end ?>
-os.exit(1)
+error"didn't find any"
 ]]
-print(code)
+print(require 'template.showcode'(code))
 assert(load(code))(...)

@@ -54,7 +54,7 @@ es:remove(1)
 for i,e in ipairs(es) do
 	io.write('triplets of e'..shortname(e)..':')
 	for _,t in ipairs(tripletsOf(e)) do
-		io.write(' '..t:map(shortname):concat'')
+		io.write(' '..t:mapi(shortname):concat'')
 	end
 	print()
 end
@@ -69,7 +69,7 @@ for i,ei in ipairs(es) do
 			return table.find(t, nil, function(ti) return ti.index == ek.index end)
 		end))
 	end
-	print(range(#tripletMap[1]):map(function(j) 
+	print(range(#tripletMap[1]):mapi(function(j) 
 		local tij = tripletMap[i][j]	
 		return tij 
 			and table.map(tij, shortname):concat()	--table.map(tij, function(e) return e.index end):concat()
@@ -125,7 +125,7 @@ local function fillMobius(...)
 	end)
 end
 
-local initM = table{...}:map(function(i)
+local initM = table{...}:mapi(function(i)
 	local neg = i:sub(1,1) == '-'
 	if neg then i = i:sub(2) end
 	i = assert(tonumber(i, 16))
@@ -140,7 +140,7 @@ local function mobiusStrips()
 	local all = table()
 	local uniqueset = table()
 	for m in fillMobius(initM:unpack()) do
-		local key = m:map(function(e) return e.index end):sort():concat'_'
+		local key = m:mapi(function(e) return e.index end):sort():concat'_'
 		if dontOmitIsomorphisms or not uniqueset[key] then
 			all:insert(m)
 			uniqueset[key] = true
@@ -151,7 +151,7 @@ end
 
 local all = mobiusStrips()
 for i,m in ipairs(all) do
-	print('ring #'..hex(i)..': '..m:map(shortname):concat' ')
+	print('ring #'..hex(i)..': '..m:mapi(shortname):concat' ')
 end
 
 print('number of unique mobius rings:',#all)

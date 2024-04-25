@@ -32,6 +32,7 @@ function App:initGL()
 	self.program = GLProgram{
 		vertexCode = self.shaderHeader..template[[
 in vec2 vertex;
+out vec2 vertexv;
 out vec3 mvposv;
 uniform mat4 mvMat;
 uniform mat4 projMat;
@@ -43,21 +44,23 @@ vec4 quatFromAngleAxis(vec4 aa) {
 }
 
 vec3 rotate(vec4 q, vec3 v) {
-	return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); 
+	return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+}
+
+vec3 mobius(vec2 uv, float radius, float width) {
+	vec4 qy = quatFromAngleAxis(vec4(0., 1., 0., M_PI * vertex.x * 2.));
+	vec4 qz = quatFromAngleAxis(vec4(0., 0., 1., M_PI * vertex.x));
+	return rotate(qy,
+		rotate(qz, vec3(0., .5 * width * (2. * vertex.y - 1.), 0.))
+		+ vec3(radius, 0., 0.)
+	);
 }
 
 void main() {
 	// TODO inv mat to get eyepos?
-	
-	vec4 qy = quatFromAngleAxis(vec4(0., 1., 0., M_PI * vertex.x * 2.));
-	vec4 qz = quatFromAngleAxis(vec4(0., 0., 1., M_PI * vertex.x));
-	
-	const float radius = 1.;
-	const float width = .5;
-	vec3 worldpos = rotate(qy,
-		rotate(qz, vec3(0., .5 * width * (2. * vertex.y - 1.), 0.))
-		+ vec3(radius, 0., 0.)
-	);
+	vertexv = vertex;
+
+	vec3 worldpos = mobius(vertex, 1., .5);
 
 	vec4 mvpos = mvMat * vec4(worldpos, 1.);
 	mvposv = mvpos.xyz;
@@ -65,13 +68,12 @@ void main() {
 }
 ]],
 		fragmentCode = self.shaderHeader..[[
-in vec3 eyeposv;
 in vec3 mvposv;
+in vec2 vertexv;
 out vec4 fragColor;
 
-const vec4 color = vec4(1., 0., 0., 1.);
-
 void main() {
+	vec4 color = vec4(vertexv.xy, .5, 1.);
 	vec3 n = normalize(cross(dFdx(mvposv), dFdy(mvposv)));
 	fragColor = abs(n.z) * color;
 }
