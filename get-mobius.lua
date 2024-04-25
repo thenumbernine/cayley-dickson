@@ -1,6 +1,7 @@
 #!/usr/bin/env luajit
 
-require 'ext'
+local table = require 'ext.table'
+local range = require 'ext.range'
 local CayleyDickson = require 'cayley-dickson'
 
 local c = CayleyDickson(4)
