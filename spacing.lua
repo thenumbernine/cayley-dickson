@@ -161,7 +161,7 @@ print(n)
 <? for i=1,n do ?>
 end
 <? end ?>
-error"didn't find any"
+os.exit(1)	-- tell allspacings.lua to not print anything
 ]]
 print(require 'template.showcode'(code))
 assert(load(code))(...)
