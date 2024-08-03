@@ -529,17 +529,17 @@ end
 local leftShiftDown
 local rightShiftDown 
 function App:event(event)
-	if event.type == sdl.SDL_MOUSEBUTTONDOWN then
-		if event.button.button == sdl.SDL_BUTTON_WHEELUP then
+	if event[0].type == sdl.SDL_MOUSEBUTTONDOWN then
+		if event[0].button.button == sdl.SDL_BUTTON_WHEELUP then
 			orbitTargetDistance = orbitTargetDistance * orbitZoomFactor
-		elseif event.button.button == sdl.SDL_BUTTON_WHEELDOWN then
+		elseif event[0].button.button == sdl.SDL_BUTTON_WHEELDOWN then
 			orbitTargetDistance = orbitTargetDistance / orbitZoomFactor
 		end
-	elseif event.type == sdl.SDL_KEYDOWN or event.type == sdl.SDL_KEYUP then
-		if event.key.keysym.sym == sdl.SDLK_LSHIFT then
-			leftShiftDown = event.type == sdl.SDL_KEYDOWN
-		elseif event.key.keysym.sym == sdl.SDLK_RSHIFT then
-			rightShiftDown = event.type == sdl.SDL_KEYDOWN
+	elseif event[0].type == sdl.SDL_KEYDOWN or event[0].type == sdl.SDL_KEYUP then
+		if event[0].key.keysym.sym == sdl.SDLK_LSHIFT then
+			leftShiftDown = event[0].type == sdl.SDL_KEYDOWN
+		elseif event[0].key.keysym.sym == sdl.SDLK_RSHIFT then
+			rightShiftDown = event[0].type == sdl.SDL_KEYDOWN
 		end
 	end
 end
