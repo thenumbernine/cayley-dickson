@@ -18,8 +18,8 @@ local mouse = Mouse()
 local viewAngle = quat()
 
 local app	-- running singleton
-local App = class(GLApp)
-
+local App = GLApp:subclass()
+App.viewUseGLMatrixMode = true
 App.title = 'Cayley-Dickson Mobius Renderer'
 
 function App:initGL()
