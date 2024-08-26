@@ -16,8 +16,6 @@ local GLArrayBuffer = require 'gl.arraybuffer'
 
 local vector_vec2f = vector'vec2f_t'
 
-require 'glapp.view'.useBuiltinMatrixMath = true
-
 local App = require 'imguiapp.withorbit'()
 App.viewDist = 3
 
