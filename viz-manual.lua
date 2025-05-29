@@ -16,7 +16,7 @@ local GLArrayBuffer = require 'gl.arraybuffer'
 
 local vector_vec2f = vector'vec2f_t'
 
-local App = require 'imguiapp.withorbit'()
+local App = require 'imgui.appwithorbit'()
 App.viewDist = 3
 
 function App:initGL()
