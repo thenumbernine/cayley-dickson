@@ -3,7 +3,7 @@ require 'ext'
 local ffi = require 'ffi'
 local bit = require 'bit'
 local vec3 = require 'vec.vec3'
-local sdl = require 'ffi.req' 'sdl'
+local sdl = require 'sdl'
 local gl = require 'gl'
 local quat = require 'vec.quat'
 local GLApp = require 'glapp'
@@ -529,16 +529,17 @@ end
 local leftShiftDown
 local rightShiftDown 
 function App:event(event)
-	if event[0].type == sdl.SDL_MOUSEBUTTONDOWN then
+	if event[0].type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN then
 		if event[0].button.button == sdl.SDL_BUTTON_WHEELUP then
 			orbitTargetDistance = orbitTargetDistance * orbitZoomFactor
 		elseif event[0].button.button == sdl.SDL_BUTTON_WHEELDOWN then
 			orbitTargetDistance = orbitTargetDistance / orbitZoomFactor
 		end
-	elseif event[0].type == sdl.SDL_KEYDOWN or event[0].type == sdl.SDL_KEYUP then
-		if event[0].key.keysym.sym == sdl.SDLK_LSHIFT then
+	elseif event[0].type == sdl.SDL_EVENT_KEY_DOWN 
+	or event[0].type == sdl.SDL_EVENT_KEY_UP then
+		if event[0].key.key == sdl.SDLK_LSHIFT then
 			leftShiftDown = event[0].type == sdl.SDL_KEYDOWN
-		elseif event[0].key.keysym.sym == sdl.SDLK_RSHIFT then
+		elseif event[0].key.key == sdl.SDLK_RSHIFT then
 			rightShiftDown = event[0].type == sdl.SDL_KEYDOWN
 		end
 	end
