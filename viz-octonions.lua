@@ -21,9 +21,9 @@ local createIndexMapTex = |indexes|
 			s = gl.GL_REPEAT,
 			t = gl.GL_REPEAT,
 		},
-	}
+	}:unbind()
 
-local createMobius = |indexes| do
+App.createMobius = |:,indexes| do
 	local xRes = 200
 	local yRes = 10
 
@@ -198,15 +198,7 @@ void main() {
 			},
 		},
 		texs = {
-			GLTex2D{
-				filename = 'viz-octonion-labels.png',
-				minFilter = gl.GL_NEAREST,
-				magFilter = gl.GL_LINEAR,
-				wrap = {
-					s = gl.GL_REPEAT,
-					t = gl.GL_REPEAT,
-				},
-			}:unbind(),
+			self.textTex,
 			-- index-remapping
 			createIndexMapTex(indexes),
 		},
@@ -219,7 +211,34 @@ end
 App.initGL = |:|do
 	App.super.initGL(self)
 
-	self.mobiusObj = createMobius{1,5,7,4,2,3,6,0}
+	-- generated ... from font.png (TODO generate font.png from a system font)
+	local fontImg = Image'font.png'
+	local textImg = Image(64 * 8, 64, fontImg.channels, 'uint8_t'):clear()
+	-- TODO additive-paste / alpha-paste
+	for i=0,7 do
+		textImg:pasteInto{x=64*i - 8, y=8, image=fontImg:copy{x=80, y=64, width=16, height=16}:resize(48, 48)} -- "e"
+		textImg:pasteInto{x=64*i + 24, y=24, image=fontImg:copy{x=16*i, y=16, width=16, height=16}:resize(32, 32)} -- `i`
+	end	
+	self.textTex = GLTex2D{
+		image = textImg,
+		minFilter = gl.GL_NEAREST,
+		magFilter = gl.GL_LINEAR,
+		wrap = {
+			s = gl.GL_REPEAT,
+			t = gl.GL_REPEAT,
+		},
+	}:unbind()
+
+	-- one possible mobius representation of quaternions-within-octonions
+	self.mobiusObj = self:createMobius{1,5,7,4,2,3,6,0}
+
+--[[ we need 16 indexes for this, currenly only 8 ...
+	local sed = table{1, 2, 5, 8, 3, 7, 13, 11, 4, 10, 6, 15, 14, 12, 9}
+	local octInSedOffsets = table{0, 1, 2, 4, 5, 8, 10} -- technicaly teh last two are reversed ... should I do that here?
+	local octTexs = range(0,14):mapi(|i|
+		octInSedOffsets:mapi(|j| sed[(i + j) % #sed + 1])
+	):mapi(|indexes| createIndexMapTex(indexes))
+--]]
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glClearColor(.1, .1, .1, 1)
