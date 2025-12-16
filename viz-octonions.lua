@@ -3,31 +3,70 @@ require 'vec-ffi'
 local gl = require 'gl'
 local GLSceneObject = require 'gl.sceneobject'
 local GLGeometry = require 'gl.geometry'
+local GLArrayBuffer = require 'gl.arraybuffer'
 local App = require 'imgui.appwithorbit'()
 App.title = 'Octonion Multiplication Table'
 App.initGL = |:|do
 	App.super.initGL(self)
 
-	--[[
-	local GLHSVTex2D = require 'gl.hsvtex2d'
-	self.textTex = GLHSVTex2D(256, nil, true):unbind()
-	--]]
-	-- [[
-	local GLTex2D = require 'gl.tex2d'
-	self.textTex = GLTex2D{
-		filename = 'viz-octonion-labels.png',
-		minFilter = gl.GL_NEAREST,
-		magFilter = gl.GL_NEAREST,
-	}:unbind()
-	--]]
+	local xRes = 200
+	local yRes = 10
+
+	local vertexGPU = GLArrayBuffer{useVec=true, dim=2}:unbind()
+	local texcoordGPU = GLArrayBuffer{useVec=true, dim=2}:unbind()
+	local normalGPU = GLArrayBuffer{useVec=true, dim=3}:unbind()
+	local vertexCPU = vertexGPU:beginUpdate()
+	local texcoordCPU = texcoordGPU:beginUpdate()
+	local normalCPU = normalGPU:beginUpdate()
+	for j=0,yRes-1 do
+		for i=0,xRes-1 do
+			vertexCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
+			texcoordCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
+		end
+	end
+	for j=0,yRes-1 do
+		for i=0,xRes-1 do
+			local iR = math.min(i+1,xRes-1) + xRes * j
+			local iL = math.max(i-1,0) + xRes * j
+			local jR = i + xRes * math.min(j+1,xRes-1)
+			local jL = i + xRes * math.max(j-1,0)
+			local u2 = vertexCPU.v[iR] - vertexCPU.v[iL]
+			local v2 = vertexCPU.v[jR] - vertexCPU.v[jL]
+			local u = vec3f(u2.x, u2.y, 0.)
+			local v = vec3f(v2.x, v2.y, 0.)
+			normalCPU:emplace_back()[0] = u:cross(v):normalize()
+		end
+	end
+	vertexGPU:endUpdate()
+	texcoordGPU:endUpdate()
+	normalGPU:endUpdate()
+
+	local geometries = table()
+	for j=0,yRes-2 do
+		local indexes = table()
+		for i=0,xRes-1 do
+			for jofs=0,1 do
+				indexes:insert(i + xRes * (j+jofs))
+			end
+		end
+		geometries:insert{
+			mode = gl.GL_TRIANGLE_STRIP,
+			indexes = {
+				data = indexes,
+			},
+		}
+	end
 
 	self.mobiusObj = GLSceneObject{
 		program = {
 			version = 'latest',
 			precision = 'best',
 			vertexCode = [[
-in vec2 vertex;
-out vec2 texcoord;
+layout(location=0) in vec2 vertex;
+layout(location=1) in vec2 texcoord;
+layout(location=2) in vec3 normal;
+out vec2 texcoordv;
+out vec3 normalv;
 uniform mat4 mvProjMat;
 
 vec3 quatRotate(vec4 q, vec3 v){
@@ -43,44 +82,32 @@ vec4 angleAxisToQuat(vec3 axis, float theta) {
 	return vec4(axis * vscale, costh);
 }
 
-vec3 vecRotate(vec3 v, float x, float y, float z, float theta) {
-	return quatRotate(angleAxisToQuat(vec3(x,y,z), theta), v);
+vec3 vecRotate(vec3 v, vec3 axis, float theta) {
+	return quatRotate(angleAxisToQuat(axis, theta), v);
 }
 
 void main() {
-	texcoord = vertex;
+	texcoordv = texcoord;
+	normalv = normalize((mvProjMat * vec4(normal, 0.)).xyz);
+
 	float u = vertex.x;
 	float v = vertex.y;
 	vec3 r = vec3(0., 0., v - .5);
-	r = vecRotate(r, 0., 1., 0., radians(180. * u));
+	r = vecRotate(r, vec3(0., 1., 0.), radians(180. * u));
 	r += vec3(1., 0., 0.);
-	r = vecRotate(r, 0., 0., 1., radians(360. * u));
+	r = vecRotate(r, vec3(0., 0., 1.), radians(360. * u));
 	gl_Position = mvProjMat * vec4(r, 1.);
 }
 
 ]],
 			fragmentCode = [[
-in vec2 texcoord;
+in vec2 texcoordv;
+in vec3 normalv;
 
-//https://www.opengl.org/discussion_boards/showthread.php/164734-Deferred-shading?p=1164077#post1164077
+out vec4 fragColor;
 
-const vec2 bufferSize = vec2(800., 600.);
-const vec2 cameraRange = vec2(.1, 100.);
-
-float depthToZPosition(in float depth) {
-	return cameraRange.x / (cameraRange.y - depth *
-		(cameraRange.y - cameraRange.x)) * cameraRange.y;
-}
-
-vec3 fragToScreen(vec3 fragCoord) {
-	vec3 screenCoord = vec3(
-		((fragCoord.x / bufferSize.x) - .5) * 2.,
-		((-fragCoord.y / bufferSize.y) + .5) * 2. / (bufferSize.x / bufferSize.y),
-		depthToZPosition(fragCoord.z));
-	screenCoord.x *= screenCoord.z;
-	screenCoord.y *= -screenCoord.z;
-	return screenCoord;
-}
+uniform float offset;
+uniform sampler2D textTex;
 
 #if 0
 //  (0,1)
@@ -94,16 +121,11 @@ vec3 fragToScreen(vec3 fragCoord) {
 //           (3/2,0)
 #endif
 
-uniform float offset;
-
-uniform sampler2D textTex;
-
 float mod1(float x) { return x - floor(x); }
 
-out vec4 fragColor;
 void main() {
-	float u = texcoord.x;
-	float v = texcoord.y;
+	float u = texcoordv.x;
+	float v = texcoordv.y;
 
 	// determine septant here
 	
@@ -161,12 +183,7 @@ void main() {
 	}
 
 	//apply diffuse lighting
-	vec3 screenCoord = fragToScreen(gl_FragCoord.xyz);
-	vec3 s = dFdx(screenCoord);
-	vec3 t = dFdy(screenCoord);
-	vec3 n = normalize(cross(s, t));
-	float l = max(n.z, .3);
-	fragColor *= l;
+	fragColor *= max(abs(normalv.z), .3);
 }
 ]],
 			uniforms = {
@@ -174,41 +191,32 @@ void main() {
 				textTex = 0,
 			},
 		},
-		geometries = table(),
-		vertexes = {
-			useVec = true,
-			dim = 2,
+		geometries = geometries,
+		vertexes = vertexGPU,
+		attrs = {
+			texcoord = {
+				buffer = texcoordGPU,
+			},
+			normal = {
+				buffer = normalGPU,
+			},
 		},
-		texs = {self.textTex},
+		texs = {
+			--[[
+			require 'gl.hsvtex2d'(256, nil, true):unbind(),
+			--]]
+			-- [[
+			require 'gl.tex2d'{
+				filename = 'viz-octonion-labels.png',
+				minFilter = gl.GL_NEAREST,
+				magFilter = gl.GL_LINEAR,
+			}:unbind(),
+			--]]
+		},
 	}
 
-	local xRes = 200
-	local yRes = 10
-	local vertexGPU = self.mobiusObj.attrs.vertex.buffer
-	local vertexCPU = vertexGPU:beginUpdate()
-	for j=0,yRes-1 do
-		for i=0,xRes-1 do
-			vertexCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
-		end
-	end
-	vertexGPU:endUpdate()
-
-	for j=0,yRes-2 do
-		local indexes = table()
-		for i=0,xRes-1 do
-			for jofs=0,1 do
-				indexes:insert(i + xRes * (j+jofs))
-			end
-		end
-		self.mobiusObj.geometries:insert(GLGeometry{
-			mode = gl.GL_TRIANGLE_STRIP,
-			indexes = {
-				data = indexes,
-			},
-		})
-	end
-
 	gl.glEnable(gl.GL_DEPTH_TEST)
+	gl.glClearColor(.1, .1, .1, 1)
 end
 
 App.update = |:|do
