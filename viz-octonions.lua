@@ -2,10 +2,14 @@
 require 'vec-ffi'
 local Image = require 'image'
 local gl = require 'gl'
+local glnumber = require 'gl.number'
 local GLSceneObject = require 'gl.sceneobject'
 local GLGeometry = require 'gl.geometry'
 local GLArrayBuffer = require 'gl.arraybuffer'
 local GLTex2D = require 'gl.tex2d'
+	
+-- how many subscripts the textTex has ("e0" thru "e"...whatever)
+local textTexMaxLetters = 16
 
 local App = require 'imgui.appwithorbit'()
 App.title = 'Octonion Multiplication Table'
@@ -101,7 +105,7 @@ in vec3 normalv;
 
 out vec4 fragColor;
 
-uniform sampler2D tex;
+uniform sampler2D textTex;
 uniform sampler2D indexMapTex;
 
 #if 0
@@ -147,7 +151,7 @@ void main() {
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(tex, vec2((tc.x + letter) / 8., tc.y));
+				fragColor = texture(textTex, vec2((tc.x + letter) / ]]..glnumber(textTexMaxLetters)..[[, tc.y));
 			} else { 
 				fragColor = vec4(0.);
 			}
@@ -160,7 +164,7 @@ void main() {
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(tex, vec2((tc.x + letter) / 8., tc.y));
+				fragColor = texture(textTex, vec2((tc.x + letter) / ]]..glnumber(textTexMaxLetters)..[[, tc.y));
 			} else {
 				fragColor = vec4(0.);
 			}
@@ -183,7 +187,7 @@ void main() {
 }
 ]],
 			uniforms = {
-				tex = 0,
+				textTex = 0,
 				indexMapTex = 1,
 			},
 		},
@@ -213,11 +217,12 @@ App.initGL = |:|do
 
 	-- generated ... from font.png (TODO generate font.png from a system font)
 	local fontImg = Image'font.png'
-	local textImg = Image(64 * 8, 64, fontImg.channels, 'uint8_t'):clear()
+	local textImg = Image(64 * textTexMaxLetters, 64, fontImg.channels, 'uint8_t'):clear()
 	-- TODO additive-paste / alpha-paste
-	for i=0,7 do
-		textImg:pasteInto{x=64*i - 8, y=8, image=fontImg:copy{x=80, y=64, width=16, height=16}:resize(48, 48)} -- "e"
-		textImg:pasteInto{x=64*i + 24, y=24, image=fontImg:copy{x=16*i, y=16, width=16, height=16}:resize(32, 32)} -- `i`
+	local letterToRegion = |c| {x=((c:byte() - 32) & 0xf) << 4, y=(c:byte() - 32) & 0xf0, width=16, height=16}
+	for i=0,textTexMaxLetters-1 do
+		textImg:pasteInto{x=64*i - 8, y=8, image=fontImg:copy(letterToRegion'e'):resize(48, 48)} -- "e"
+		textImg:pasteInto{x=64*i + 24, y=24, image=fontImg:copy(letterToRegion(i:hex())):resize(32, 32)} -- `i` from 0 to 7
 	end	
 	self.textTex = GLTex2D{
 		image = textImg,
