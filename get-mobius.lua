@@ -4,13 +4,13 @@ local CayleyDickson = require 'cayley-dickson'
 local c = CayleyDickson(4)
 print(c)
 
-local function shortname(e)
-	return (e.negative and '-' or '') .. e.index:hex()
-end
+local mod1 = |x, p| ((x-1) % p + 1)		-- modulo of 1-based indexes
+
+local shortname = |e| ((e.negative and '-' or '') .. e.index:hex())
 
 local allTriplets = c:getTriplets()
 
-print'triplets:'
+print'quaternions:'
 for i,t in ipairs(allTriplets) do
 	print('t'..i, table.unpack(t))
 end
@@ -44,14 +44,14 @@ local es = table(c[1])
 es:remove(1)
 
 for i,e in ipairs(es) do
-	io.write('triplets of e'..shortname(e)..':')
+	io.write('quaternions of e'..shortname(e)..':')
 	for _,t in ipairs(getQuaternionTriplets(e)) do
 		io.write(' '..t:mapi(shortname):concat'')
 	end
 	print()
 end
 
-print'triplets of ei * ej:'
+print'quaternions of ei * ej:'
 local tripletMap = table()
 for i,ei in ipairs(es) do
 	tripletMap[i] = table()
@@ -69,7 +69,7 @@ for i,ei in ipairs(es) do
 	end):concat' ')
 end
 
-print('unique mobius rings:')
+print('unique mobius octonions in sedenions:')
 local function tablesAreEqual(a,b)
 	if #a ~= #b then return false end
 	for i=1,#a do
@@ -148,31 +148,123 @@ end
 
 local allOctonionsInSedenion = mobiusStrips()
 for i,m in ipairs(allOctonionsInSedenion) do
-	print('ring #'..i:hex()..': '..m:mapi(shortname):concat' ')
+	print('oct #'..i:hex()..': '..m:mapi(shortname):concat' ')
 end
 
-print('number of unique mobius rings:',#allOctonionsInSedenion)
+print('number of unique mobius octonions in sedenions:', #allOctonionsInSedenion)
 
 -- now remove the trailing minus-parity rings
 print('sign-agnostic:')
-for i=1,#allOctonionsInSedenion do
-	local m = allOctonionsInSedenion[i]
+local signAgnosticOctInSed = table(allOctonionsInSedenion):mapi(|o| table(o):mapi(|e| e.negative and -e or e))
+for i=1,#signAgnosticOctInSed do
+	local m = signAgnosticOctInSed[i]
 	if #m == 14 then
 		for j=1,7 do
-			assert(m[j+7].index == m[j].index)
+			assert.eq(m[j+7].index, m[j].index)
 		end
 		m = table.sub(m, 1, 7)
-		allOctonionsInSedenion[i] = m
-	end
-	-- TODO make abs here
-	for j=1,#m do
-		m[j].negative = false
+		signAgnosticOctInSed[i] = m
 	end
 end
-for i,m in ipairs(allOctonionsInSedenion) do
-	print('ring #'..i:hex()..': '..m:mapi(shortname):concat' ')
+for i,m in ipairs(signAgnosticOctInSed) do
+	print('oct #'..i:hex()..': '..m:mapi(shortname):concat' ')
 end
--- TODO fill sedenion mobius ...
+
+-- now, with allOctonionsInSedenion ...
+-- ... go through each triplet of e's that are in triplets of r's ...
+print('looking for quaternions of octonions that contain each quaternions of basis elements...')
+print('...such that the subsequent has two in common with the previous...')
+print('...and each triplet of octonions should possess each element once, except the basis triplet which appears 3 times')
+do
+	local function findOctTripletContainingBasii(i1, i2, i3)
+		local results = table()
+		--[[ why is this running away when it works a few lines earlier?
+		for m in fillMobius(quaternionInOctonionOffsets, getQuaternionTriplets, i1, i2, i3) do
+			results:insert(table(m))
+		end
+		--]]
+		-- [[
+		for _,o in ipairs(signAgnosticOctInSed) do
+			local ofs1 = table.find(o, nil, |e| e.index == i1)
+			local ofs2 = table.find(o, nil, |e| e.index == i2)
+			local ofs3 = table.find(o, nil, |e| e.index == i3)
+			if ofs1 and ofs2 and ofs3 then
+				if mod1(ofs2+1, #o) == ofs1 then
+					-- reversed
+					assert.len(o, 7)
+					o = {
+						o[mod1(ofs1+0, 7)],
+						o[mod1(ofs1+6, 7)],
+						o[mod1(ofs1+5, 7)],	-- \
+						o[mod1(ofs1+2, 7)], -- |- these two are interchangeable 
+						o[mod1(ofs1+1, 7)], -- /
+						o[mod1(ofs1+3, 7)], -- \_ these two are interchangeable
+						o[mod1(ofs1+4, 7)], -- /
+					}
+					ofs1 = 1
+					ofs2 = 2
+					ofs3 = 4
+				elseif mod1(ofs2+2, #o) == ofs1 then
+					o = {
+						o[mod1(ofs1+0, 7)],
+						o[mod1(ofs1+5, 7)],
+						o[mod1(ofs1+6, 7)],
+						o[mod1(ofs1+4, 7)],
+						o[mod1(ofs1+1, 7)],
+						o[mod1(ofs1+3, 7)],
+						o[mod1(ofs1+2, 7)],
+					}
+					ofs1 = 1
+					ofs2 = 2
+					ofs3 = 4				
+				elseif mod1(ofs2+3, #o) == ofs1 then
+					o = {
+						o[mod1(ofs1+0, 7)],
+						o[mod1(ofs1+4, 7)],
+						o[mod1(ofs1+6, 7)],
+						o[mod1(ofs1+5, 7)],
+						o[mod1(ofs1+3, 7)],
+						o[mod1(ofs1+1, 7)],
+						o[mod1(ofs1+2, 7)],
+					}
+					ofs1 = 1
+					ofs2 = 2
+					ofs3 = 4							
+				end
+				if mod1(ofs1+1, #o) ~= ofs2 then
+					error("idk this order "..tolua{ofs1=ofs1, ofs2=ofs2, ofs3=ofs3}..' for '..o:mapi(shortname):concat' ')
+				end
+				results:insert(range(#o):mapi(|i| o[mod1(i + ofs1-1, #o)]))
+			end
+		end
+		--]]
+		return results
+	end
+
+	local startIndexes = table{1,2,3}
+	local searchOffsets = table{1,2,4}	-- 1,2,4 == spacing
+
+	local searchForBasisIndexes, sedTriplet
+	searchForBasisIndexes = startIndexes 
+	sedTriplet = findOctTripletContainingBasii(searchForBasisIndexes:unpack())
+	print('triplet containing '..searchForBasisIndexes:concat' ')
+	for _,o in ipairs(sedTriplet) do
+		print(' '..o:mapi(shortname):concat' ')
+	end
+
+	for iter=1,6 do
+		searchForBasisIndexes = searchOffsets:mapi(|i| sedTriplet[1][i+1].index)
+		sedTriplet = findOctTripletContainingBasii(searchForBasisIndexes:unpack())
+		print('triplet containing '..searchForBasisIndexes:concat' ')
+		for _,o in ipairs(sedTriplet) do
+			print(' '..o:mapi(shortname):concat' ')
+		end
+	end
+end
+
+
+
+--[[ TODO fill sedenion mobius ...
 local octonionInSedenionOffsets = {0, 1, 2, 4, 5, 8, 10} 
 local function getSubOctonions(e)
 	local ts = table()
@@ -193,8 +285,9 @@ local function getSubOctonions(e)
 		end
 	end
 	return ts
-
 end
+
 for m in fillMobius(octonionInSedenionOffsets, getSubOctonions, 1, 2, 4, 3) do
 	print(m:concat' ')
 end
+--]]
