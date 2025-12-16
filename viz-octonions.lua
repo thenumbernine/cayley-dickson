@@ -17,7 +17,7 @@ App.viewDist = 2
 
 local createIndexMapTex = |indexes|
 	GLTex2D{
-		image = Image(8, 1, 1, 'float', indexes),
+		image = Image(8, 1, 1, 'float', table(indexes):append{0}),
 		internalFormat = gl.GL_R32F,
 		minFilter = gl.GL_NEAREST,
 		magFilter = gl.GL_NEAREST,
@@ -27,7 +27,7 @@ local createIndexMapTex = |indexes|
 		},
 	}:unbind()
 
-App.createMobius = |:,indexes| do
+App.createMobius = |:,basisIndexes| do
 	local xRes = 200
 	local yRes = 10
 
@@ -204,7 +204,7 @@ void main() {
 		texs = {
 			self.textTex,
 			-- index-remapping
-			createIndexMapTex(indexes),
+			createIndexMapTex(basisIndexes),
 		},
 	}
 
@@ -222,7 +222,7 @@ App.initGL = |:|do
 	local letterToRegion = |c| {x=((c:byte() - 32) & 0xf) << 4, y=(c:byte() - 32) & 0xf0, width=16, height=16}
 	for i=0,textTexMaxLetters-1 do
 		textImg:pasteInto{x=64*i - 8, y=8, image=fontImg:copy(letterToRegion'e'):resize(48, 48)} -- "e"
-		textImg:pasteInto{x=64*i + 24, y=24, image=fontImg:copy(letterToRegion(i:hex())):resize(32, 32)} -- `i` from 0 to 7
+		textImg:pasteInto{x=64*i + 24, y=24, image=fontImg:copy(letterToRegion(i:hex())):resize(32, 32)} -- `i` from 0 to f (in hex)
 	end	
 	self.textTex = GLTex2D{
 		image = textImg,
@@ -235,15 +235,17 @@ App.initGL = |:|do
 	}:unbind()
 
 	-- one possible mobius representation of quaternions-within-octonions
-	self.mobiusObj = self:createMobius{1,5,7,4,2,3,6,0}
+	self.mobiusObj = self:createMobius{1,5,7,4,2,3,6}
 
---[[ we need 16 indexes for this, currenly only 8 ...
 	local sed = table{1, 2, 5, 8, 3, 7, 13, 11, 4, 10, 6, 15, 14, 12, 9}
-	local octInSedOffsets = table{0, 1, 2, 4, 5, 8, 10} -- technicaly teh last two are reversed ... should I do that here?
-	local octTexs = range(0,14):mapi(|i|
+	
+	-- technicaly teh last two are reversed ... should I do that here?
+	-- also, the spacing implies, I'm going to have to space out the vertexes in these mobius strips to get them to match up with one another
+	local octInSedOffsets = table{0, 1, 2, 4, 5, 8, 10}
+	
+	self.octInSedIndexMapTexs = range(0,14):mapi(|i|
 		octInSedOffsets:mapi(|j| sed[(i + j) % #sed + 1])
 	):mapi(|indexes| createIndexMapTex(indexes))
---]]
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glClearColor(.1, .1, .1, 1)
@@ -252,9 +254,23 @@ end
 App.update = |:|do
 	gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
+
+	--[[ draw one mobius
 	self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
 	self.mobiusObj:draw()
-
+	--]]
+	-- [[ draw 7 mobiuses
+	for i,indexMapTex in ipairs(self.octInSedIndexMapTexs) do
+		self.view:setupModelView()	-- reset viewMat.  how about push/pop, or better, in View split mvMat into modelMat and viewMat?
+		self.view.mvMat:applyRotate(i / #self.octInSedIndexMapTexs * 2 * math.pi, 0, 1, 0)
+		self.view.mvMat:applyTranslate(2,0,0)
+		self.view.mvProjMat:mul4x4(self.view.projMat, self.view.mvMat)
+		
+		self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
+		self.mobiusObj.texs[2] = indexMapTex
+		self.mobiusObj:draw()
+	end
+	--]]
 	App.super.update(self)
 end
 
