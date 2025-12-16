@@ -1,9 +1,12 @@
 #!/usr/bin/env rua
 require 'vec-ffi'
+local Image = require 'image'
 local gl = require 'gl'
 local GLSceneObject = require 'gl.sceneobject'
 local GLGeometry = require 'gl.geometry'
 local GLArrayBuffer = require 'gl.arraybuffer'
+local GLTex2D = require 'gl.tex2d'
+
 local App = require 'imgui.appwithorbit'()
 App.title = 'Octonion Multiplication Table'
 App.initGL = |:|do
@@ -87,6 +90,7 @@ in vec3 normalv;
 out vec4 fragColor;
 
 uniform sampler2D tex;
+uniform sampler2D indexMapTex;
 
 #if 0
 //  (0,1)
@@ -101,6 +105,10 @@ uniform sampler2D tex;
 #endif
 
 float mod1(float x) { return x - floor(x); }
+
+float mapLetter(float u) {
+	return floor(mod1(u / 7.) * 7.);
+}
 
 void main() {
 	float u = texcoordv.x;
@@ -120,9 +128,10 @@ void main() {
 		float len;
 		float letter;
 		
-		letter = floor(mod1((u - .5) / 7.) * 7.);
-		tc = 5. * vec2(3./2. * mod1(u + .5 / 5. * 2. / 3.), v);
-		len = length(tc-.5)/.5;
+		letter = mapLetter(u - .5);
+
+		tc = 5. * vec2(3. / 2. * mod1(u + .5 / 5. * 2. / 3.), v);
+		len = length(tc - .5) / .5;
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
@@ -133,9 +142,9 @@ void main() {
 			return;
 		}
 		
-		letter = floor(mod1((u+3.)/7.)*7.);
-		tc = 5. * vec2(3./2. * mod1(u - .5 + .5 / 5. * 2. / 3.), v - .8);
-		len = length(tc-.5)/.5;
+		letter = mapLetter(u + 3.);
+		tc = 5. * vec2(3. / 2. * mod1(u - .5 + .5 / 5. * 2. / 3.), v - .8);
+		len = length(tc - .5) / .5;
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
@@ -163,6 +172,7 @@ void main() {
 ]],
 			uniforms = {
 				tex = 0,
+				indexMapTex = 1,
 			},
 		},
 		geometries = geometries,
@@ -176,16 +186,18 @@ void main() {
 			},
 		},
 		texs = {
-			--[[
-			require 'gl.hsvtex2d'(256, nil, true):unbind(),
-			--]]
-			-- [[
-			require 'gl.tex2d'{
+			GLTex2D{
 				filename = 'viz-octonion-labels.png',
 				minFilter = gl.GL_NEAREST,
 				magFilter = gl.GL_LINEAR,
 			}:unbind(),
-			--]]
+			-- index-remapping
+			GLTex2D{
+				image = Image(8, 1, 1, 'float', {1,5,7,4,2,3,6,0}),
+				internalFormat = gl.GL_R32F,
+				minFilter = gl.GL_NEAREST,
+				magFilter = gl.GL_NEAREST,
+			},
 		},
 	}
 
