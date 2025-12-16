@@ -119,16 +119,14 @@ void main() {
 		vec2 tc;
 		float len;
 		float letter;
-		vec2 letterOffset;
 		
-		letter = floor(mod1((u-.5)/7.)*7.);
-		letterOffset = vec2(mod(letter, 4.) * .25, floor(letter / 4.) * .5);
+		letter = floor(mod1((u - .5) / 7.) * 7.);
 		tc = 5. * vec2(3./2. * mod1(u + .5 / 5. * 2. / 3.), v);
 		len = length(tc-.5)/.5;
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(tex, tc * vec2(.25, .5) + letterOffset);
+				fragColor = texture(tex, vec2((tc.x + letter) / 8., tc.y));
 			} else { 
 				fragColor = vec4(0.);
 			}
@@ -136,13 +134,12 @@ void main() {
 		}
 		
 		letter = floor(mod1((u+3.)/7.)*7.);
-		letterOffset = vec2(mod(letter, 4.) * .25, floor(letter / 4.) * .5);
 		tc = 5. * vec2(3./2. * mod1(u - .5 + .5 / 5. * 2. / 3.), v - .8);
 		len = length(tc-.5)/.5;
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(tex, tc * vec2(.25, .5) + letterOffset);
+				fragColor = texture(tex, vec2((tc.x + letter) / 8., tc.y));
 			} else {
 				fragColor = vec4(0.);
 			}
