@@ -1,0 +1,21 @@
+#!/usr/bin/env rua
+-- what does this do ... runs all permutations of spacing.rua
+-- what does spacing.rua do?  better check its docs.
+for p=2,15 do
+	for n=0,p do
+		for m=0,n do
+			-- TODO figure out if ctrl-c was pressed and genuinely quit 
+			assert(os.execute('./spacing.rua '..m..' '..n..' '..p..' > tmp'))
+			local tmp = path'tmp':read()
+			path'tmp':remove()
+			local lines = tmp:trim():split'\n'
+			local found = lines[#lines] == 'found'
+			if found then
+				local result = lines[#lines-1]
+				print(table{m,n,p}:concat', '..' '..result)
+			else
+				print('bad', m,n,p)
+			end
+		end
+	end
+end
