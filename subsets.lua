@@ -1,10 +1,7 @@
 #!/usr/bin/env luajit
-
 require 'ext'
-local permutations = require 'permutations'
-
 local CayleyDickson = require 'cayley-dickson'
-local permutations = require 'permutations'
+local permutations = require 'permutations'	-- TODO use table.permutations
 
 local function findSubsets(sup, sub)
 	return coroutine.wrap(function()

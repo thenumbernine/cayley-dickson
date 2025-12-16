@@ -1,19 +1,11 @@
-#!/usr/bin/env luajit
-
-local table = require 'ext.table'
-local range = require 'ext.range'
+#!/usr/bin/env rua
 local CayleyDickson = require 'cayley-dickson'
 
 local c = CayleyDickson(4)
 print(c)
 
-local function hex(i)
-	if i < 10 then return i end
-	return string.char(('A'):byte() + i - 10)
-end
-
 local function shortname(e)
-	return (e.negative and '-' or '') .. hex(e.index)
+	return (e.negative and '-' or '') .. e.index:hex()
 end
 
 local allTriplets = c:getTriplets()
@@ -156,7 +148,7 @@ end
 
 local allOctonionsInSedenion = mobiusStrips()
 for i,m in ipairs(allOctonionsInSedenion) do
-	print('ring #'..hex(i)..': '..m:mapi(shortname):concat' ')
+	print('ring #'..i:hex()..': '..m:mapi(shortname):concat' ')
 end
 
 print('number of unique mobius rings:',#allOctonionsInSedenion)
@@ -178,7 +170,7 @@ for i=1,#allOctonionsInSedenion do
 	end
 end
 for i,m in ipairs(allOctonionsInSedenion) do
-	print('ring #'..hex(i)..': '..m:mapi(shortname):concat' ')
+	print('ring #'..i:hex()..': '..m:mapi(shortname):concat' ')
 end
 -- TODO fill sedenion mobius ...
 local octonionInSedenionOffsets = {0, 1, 2, 4, 5, 8, 10} 

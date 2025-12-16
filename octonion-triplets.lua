@@ -11,6 +11,8 @@ args:
 	index = constructed index to be passed to the callback
 	[optional]
 	size = how many elements to return.  default is the length
+
+TODO use table.permutations
 --]]
 
 local table = require 'ext.table'
