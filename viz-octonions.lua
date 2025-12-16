@@ -9,9 +9,21 @@ local GLTex2D = require 'gl.tex2d'
 
 local App = require 'imgui.appwithorbit'()
 App.title = 'Octonion Multiplication Table'
-App.initGL = |:|do
-	App.super.initGL(self)
+App.viewDist = 2
 
+local createIndexMapTex = |indexes|
+	GLTex2D{
+		image = Image(8, 1, 1, 'float', indexes),
+		internalFormat = gl.GL_R32F,
+		minFilter = gl.GL_NEAREST,
+		magFilter = gl.GL_NEAREST,
+		wrap = {
+			s = gl.GL_REPEAT,
+			t = gl.GL_REPEAT,
+		},
+	}
+
+local createMobius = |indexes| do
 	local xRes = 200
 	local yRes = 10
 
@@ -64,7 +76,7 @@ App.initGL = |:|do
 		}
 	end
 
-	self.mobiusObj = GLSceneObject{
+	local mobiusObj = GLSceneObject{
 		program = {
 			version = 'latest',
 			precision = 'best',
@@ -196,18 +208,18 @@ void main() {
 				},
 			}:unbind(),
 			-- index-remapping
-			GLTex2D{
-				image = Image(8, 1, 1, 'float', {1,5,7,4,2,3,6,0}),
-				internalFormat = gl.GL_R32F,
-				minFilter = gl.GL_NEAREST,
-				magFilter = gl.GL_NEAREST,
-				wrap = {
-					s = gl.GL_REPEAT,
-					t = gl.GL_REPEAT,
-				},
-			},
+			createIndexMapTex(indexes),
 		},
 	}
+
+	return mobiusObj
+end
+
+
+App.initGL = |:|do
+	App.super.initGL(self)
+
+	self.mobiusObj = createMobius{1,5,7,4,2,3,6,0}
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glClearColor(.1, .1, .1, 1)
