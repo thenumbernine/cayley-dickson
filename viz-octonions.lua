@@ -12,28 +12,32 @@ App.initGL = |:|do
 	local xRes = 200
 	local yRes = 10
 
-	local vertexGPU = GLArrayBuffer{useVec=true, dim=2}:unbind()
+	local vertexGPU = GLArrayBuffer{useVec=true, dim=3}:unbind()
 	local texcoordGPU = GLArrayBuffer{useVec=true, dim=2}:unbind()
 	local normalGPU = GLArrayBuffer{useVec=true, dim=3}:unbind()
 	local vertexCPU = vertexGPU:beginUpdate()
 	local texcoordCPU = texcoordGPU:beginUpdate()
 	local normalCPU = normalGPU:beginUpdate()
 	for j=0,yRes-1 do
+		local v = j / (yRes-1)
 		for i=0,xRes-1 do
-			vertexCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
+			local u = i / (xRes-1)
+			local r = vec3f(0, 0, v - .5)
+			r = quatf():fromAngleAxis(0,1,0,180*u):rotate(r)
+			r += vec3f(1,0,0)
+			r = quatf():fromAngleAxis(0,0,1,360*u):rotate(r)
+			vertexCPU:emplace_back()[0] = r --:set( i / (xRes-1), j / (yRes-1) )
 			texcoordCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
 		end
 	end
 	for j=0,yRes-1 do
 		for i=0,xRes-1 do
 			local iR = math.min(i+1,xRes-1) + xRes * j
-			local iL = math.max(i-1,0) + xRes * j
-			local jR = i + xRes * math.min(j+1,xRes-1)
+			local iL = math.max(i-1,0)      + xRes * j
+			local jR = i + xRes * math.min(j+1,yRes-1)
 			local jL = i + xRes * math.max(j-1,0)
-			local u2 = vertexCPU.v[iR] - vertexCPU.v[iL]
-			local v2 = vertexCPU.v[jR] - vertexCPU.v[jL]
-			local u = vec3f(u2.x, u2.y, 0.)
-			local v = vec3f(v2.x, v2.y, 0.)
+			local u = vertexCPU.v[iR] - vertexCPU.v[iL]
+			local v = vertexCPU.v[jR] - vertexCPU.v[jL]
 			normalCPU:emplace_back()[0] = u:cross(v):normalize()
 		end
 	end
@@ -62,41 +66,17 @@ App.initGL = |:|do
 			version = 'latest',
 			precision = 'best',
 			vertexCode = [[
-layout(location=0) in vec2 vertex;
+layout(location=0) in vec3 vertex;
 layout(location=1) in vec2 texcoord;
 layout(location=2) in vec3 normal;
 out vec2 texcoordv;
 out vec3 normalv;
 uniform mat4 mvProjMat;
 
-vec3 quatRotate(vec4 q, vec3 v){
-	return v + 2. * cross(cross(v, q.xyz) - q.w * v, q.xyz);
-}
-
-//assumes axis is normalized
-vec4 angleAxisToQuat(vec3 axis, float theta) {
-	float vlen = length(axis);
-	float costh = cos(.5 * theta);
-	float sinth = sin(.5 * theta);
-	float vscale = sinth / vlen;
-	return vec4(axis * vscale, costh);
-}
-
-vec3 vecRotate(vec3 v, vec3 axis, float theta) {
-	return quatRotate(angleAxisToQuat(axis, theta), v);
-}
-
 void main() {
 	texcoordv = texcoord;
 	normalv = normalize((mvProjMat * vec4(normal, 0.)).xyz);
-
-	float u = vertex.x;
-	float v = vertex.y;
-	vec3 r = vec3(0., 0., v - .5);
-	r = vecRotate(r, vec3(0., 1., 0.), radians(180. * u));
-	r += vec3(1., 0., 0.);
-	r = vecRotate(r, vec3(0., 0., 1.), radians(360. * u));
-	gl_Position = mvProjMat * vec4(r, 1.);
+	gl_Position = mvProjMat * vec4(vertex, 1.);
 }
 
 ]],
@@ -106,8 +86,7 @@ in vec3 normalv;
 
 out vec4 fragColor;
 
-uniform float offset;
-uniform sampler2D textTex;
+uniform sampler2D tex;
 
 #if 0
 //  (0,1)
@@ -134,7 +113,6 @@ void main() {
 		u += .5;
 		v = 1. - v;
 	}
-	u = mod1(u - offset);
 	u = u * 7.;
 
 	{
@@ -150,7 +128,7 @@ void main() {
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(textTex, tc * vec2(.25, .5) + letterOffset);
+				fragColor = texture(tex, tc * vec2(.25, .5) + letterOffset);
 			} else { 
 				fragColor = vec4(0.);
 			}
@@ -164,7 +142,7 @@ void main() {
 		if (len <= 1.) {
 			if (len <= .95) {
 				tc.x = 1. - tc.x;
-				fragColor = texture(textTex, tc * vec2(.25, .5) + letterOffset);
+				fragColor = texture(tex, tc * vec2(.25, .5) + letterOffset);
 			} else {
 				fragColor = vec4(0.);
 			}
@@ -187,8 +165,7 @@ void main() {
 }
 ]],
 			uniforms = {
-				offset = 0,
-				textTex = 0,
+				tex = 0,
 			},
 		},
 		geometries = geometries,
