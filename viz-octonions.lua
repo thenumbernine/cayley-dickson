@@ -183,31 +183,25 @@ void main() {
 	end
 	vertexGPU:endUpdate()
 
-	local indexes = table()
 	for j=0,yRes-2 do
-		local indexOffset = #indexes
+		local indexes = table()
 		for i=0,xRes-1 do
 			for jofs=0,1 do
 				indexes:insert(i + xRes * (j+jofs))
 			end
 		end
-		local indexCount = #indexes - indexOffset
-
+		local GLElementArrayBuffer = require 'gl.elementarraybuffer'
 		self.mobiusObj.geometries:insert(GLGeometry{
 			mode = gl.GL_TRIANGLE_STRIP,
-			offset = indexOffset,
-			count = indexCount,
+			-- why doesn't it automatically convert?
+			indexes = GLElementArrayBuffer{
+				data = indexes,
+				-- why doesnt this auto select as well? it's the class .type field default...
+				type = gl.GL_UNSIGNED_INT,
+			}:unbind(),
+			-- why doesn't it automatically use indexes.count ?
+			count = #indexes,
 		})
-	end
-	local GLElementArrayBuffer = require 'gl.elementarraybuffer'
-	-- why doesn't it automatically convert?
-	local indexBuffer = GLElementArrayBuffer{
-		data = indexes,
-		-- why doesnt this auto select as well? it's the class .type field default...
-		type = gl.GL_UNSIGNED_INT,
-	}:unbind()
-	for _,g in ipairs(self.mobiusObj.geometries) do
-		g.indexes = indexBuffer
 	end
 end
 
