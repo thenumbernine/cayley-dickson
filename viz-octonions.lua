@@ -107,7 +107,7 @@ uniform sampler2D indexMapTex;
 float mod1(float x) { return x - floor(x); }
 
 float mapLetter(float u) {
-	return floor(mod1(u / 7.) * 7.);
+	return texture(indexMapTex, vec2(mod1(u / 7.) * 7. / 8., .5)).r;
 }
 
 void main() {
@@ -190,6 +190,10 @@ void main() {
 				filename = 'viz-octonion-labels.png',
 				minFilter = gl.GL_NEAREST,
 				magFilter = gl.GL_LINEAR,
+				wrap = {
+					s = gl.GL_REPEAT,
+					t = gl.GL_REPEAT,
+				},
 			}:unbind(),
 			-- index-remapping
 			GLTex2D{
@@ -197,6 +201,10 @@ void main() {
 				internalFormat = gl.GL_R32F,
 				minFilter = gl.GL_NEAREST,
 				magFilter = gl.GL_NEAREST,
+				wrap = {
+					s = gl.GL_REPEAT,
+					t = gl.GL_REPEAT,
+				},
 			},
 		},
 	}
