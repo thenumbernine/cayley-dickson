@@ -8,8 +8,18 @@ App.title = 'Octonion Multiplication Table'
 App.initGL = |:|do
 	App.super.initGL(self)
 
+	--[[
 	local GLHSVTex2D = require 'gl.hsvtex2d'
-	self.textTex = GLHSVTex2D(256, nil, true)
+	self.textTex = GLHSVTex2D(256, nil, true):unbind()
+	--]]
+	-- [[
+	local GLTex2D = require 'gl.tex2d'
+	self.textTex = GLTex2D{
+		filename = 'viz-octonion-labels.png',
+		minFilter = gl.GL_NEAREST,
+		magFilter = gl.GL_NEAREST,
+	}:unbind()
+	--]]
 
 	self.mobiusObj = GLSceneObject{
 		program = {
@@ -190,19 +200,15 @@ void main() {
 				indexes:insert(i + xRes * (j+jofs))
 			end
 		end
-		local GLElementArrayBuffer = require 'gl.elementarraybuffer'
 		self.mobiusObj.geometries:insert(GLGeometry{
 			mode = gl.GL_TRIANGLE_STRIP,
-			-- why doesn't it automatically convert?
-			indexes = GLElementArrayBuffer{
+			indexes = {
 				data = indexes,
-				-- why doesnt this auto select as well? it's the class .type field default...
-				type = gl.GL_UNSIGNED_INT,
-			}:unbind(),
-			-- why doesn't it automatically use indexes.count ?
-			count = #indexes,
+			},
 		})
 	end
+
+	gl.glEnable(gl.GL_DEPTH_TEST)
 end
 
 App.update = |:|do
