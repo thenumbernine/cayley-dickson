@@ -8,15 +8,42 @@ print(c)
 local n = #c-1
 
 local nodes = range(n):mapi(|i| 'e'..i)
-local weights = range(n):mapi(|i| range(n):mapi(|j| 0))
-for i=1,n do
-	for j=1,n do
-		if not c[i+1][j+1].negative then
-			weights[i][j] = 1
-			weights[j][c[i+1][j+1].index] = 1
+
+if m == 3 then-- also link to quaternion triplets
+	nodes:append(range(n):mapi(|i| 'q'..i))
+end
+
+local weights = range(#nodes):mapi(|i| range(#nodes):mapi(|j| 0))
+
+-- link between nodes, but honestly it is every node, since all nodes can multiply with al other nodes
+if m ~= 3 then
+	for i=1,n do
+		for j=1,n do
+			if not c[i+1][j+1].negative then
+				weights[i][j] = 1
+				weights[j][c[i+1][j+1].index] = 1
+			end
 		end
 	end
 end
+
+-- now link from each node to its respective triplet
+-- TODO how to deduce this automatically. .. its in another script ...
+if m == 3 then
+	local addQuat = |q,a,b,c| do
+		weights[a][7+q] = 1
+		weights[b][7+q] = 1
+		weights[c][7+q] = 1
+	end
+	addQuat(1, 1,2,3)
+	addQuat(2, 1,4,5)
+	addQuat(3, 1,7,6)
+	addQuat(4, 2,4,6)
+	addQuat(5, 2,5,7)
+	addQuat(6, 3,4,7)
+	addQuat(7, 3,6,5)
+end
+
 print(tolua(weights))
 
 local app = ForceDirectedGraph{
