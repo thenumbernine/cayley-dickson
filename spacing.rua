@@ -111,7 +111,7 @@ local p = 7
 
 local check = matrix.lambda({p,p}, |i,j| i==j and n or m)
 
-local o = range(n):mapi(|| 0)
+local o = range(n):mapi(|i| i-1)
 local omax = range(n):mapi(|i| i == 1 and 0 or p-1)	-- constrian our 1st iterator to 0 only to cut down on isomorphisms
 while true do
 	local offsets = table(o)
@@ -145,7 +145,7 @@ while true do
 				):concat()
 				if shifted == sofar.expanded:concat() then return true end
 			end
-		end)	
+		end)
 
 		allSoFar:insert{
 			offsets = table(offsets),
@@ -172,11 +172,17 @@ while true do
 		o[i] += 1
 		-- make sure all proceeding/more-nested iterations start at o[i]
 		-- i.e. make sure o[1] = 0, o[i-1] <= o[i] <= p-1
+		local iterfail
 		for j=i+1,n do
-			o[j] = math.max(o[j], o[i])
+			o[j] = math.max(o[i]+1, o[j])
+			if o[j] > omax[j] then
+				iterfail = true
+				break
+			end
 		end
-		if o[i] <= omax[i] then break end -- iteration worked. stop.
-		-- now we want to inc the preceding o ... and then inc all subsequent ... 
+		iterfail = iterfail or o[i] > omax[i]
+		if not iterfail then break end -- iteration worked. stop.
+		-- now we want to inc the preceding o ... and then inc all subsequent ...
 		o[i] = 0
 		if i == 1 then return end
 	end
