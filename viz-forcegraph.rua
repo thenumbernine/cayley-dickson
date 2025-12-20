@@ -1,7 +1,7 @@
 #!/usr/bin/env rua
 local ForceDirectedGraph = require 'force-directed-graph'
 local CayleyDickson = require 'cayley-dickson'
-
+require 'vec-ffi'
 
 -- CLI options:
 
@@ -49,7 +49,10 @@ local addBiDirWeight = |i,j|do
 end
 
 -- make nodes for all basis elements
-local nodes = range(n):mapi(|i| 'e'..i)
+local nodes = range(n):mapi(|i| {
+	name = 'e'..i,
+	color = vec3f(1,1,0),
+})
 
 local nodeIndexForIdent = {}
 
@@ -74,8 +77,10 @@ local makeOrFindQuat = |eIndexesInQ| do
 		end
 
 		qNames:insert(nodeName)
-		nodes:insert(nodeName)
-
+		nodes:insert{
+			name = nodeName,
+			color = vec3f(1,0,1),
+		}
 		qNodeIndex = #nodes
 		nodeIndexForIdent[nodeIdent] = qNodeIndex
 	end
@@ -142,7 +147,10 @@ local makeOrFindOct = |eIndexesInO| do
 		end
 		
 		oNames:insert(nodeName)
-		nodes:insert(nodeName)
+		nodes:insert{
+			name = nodeName,
+			color = vec3f(0,1,1),
+		}
 		oNodeIndex = #nodes
 		nodeIndexForIdent[nodeIdent] = oNodeIndex
 	end
