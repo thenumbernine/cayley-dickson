@@ -2,6 +2,7 @@
 local ForceDirectedGraph = require 'force-directed-graph'
 local CayleyDickson = require 'cayley-dickson'
 
+-- CLI these plz:
 local useEdgesBetweenQuatBasis = false	-- if this is true, it just makes a dense graph among all basis elements
 local useQuaternionNodes = true
 
@@ -27,6 +28,7 @@ end
 local nodes = range(n):mapi(|i| 'e'..i)
 
 -- make nodes for all quaternions
+-- TODO only for m>=2
 local qForSig = table()
 local qs = table()
 for i=1,n-1 do
@@ -34,7 +36,7 @@ for i=1,n-1 do
 		local k = (e[i] * e[j]).index
 		local qsig = table{i,j,k}:sort():concat','
 		if not qForSig[qsig] then
-			local q = 'q'..(#qs+1)..'=e'..qsig
+			local q = 'q'..(#qs+1)
 			qForSig[qsig] = q
 
 			if useQuaternionNodes then
@@ -54,24 +56,9 @@ for i=1,n-1 do
 	end
 end
 
---[[
--- now link from each node to its respective triplet
--- TODO how to deduce this automatically. .. its in another script ...
-if m == 3 then
-	local addQuat = |q,a,b,c| do
-		weights[a][7+q] = 1
-		weights[b][7+q] = 1
-		weights[c][7+q] = 1
-	end
-	addQuat(1, 1,2,3)
-	addQuat(2, 1,4,5)
-	addQuat(3, 1,7,6)
-	addQuat(4, 2,4,6)
-	addQuat(5, 2,5,7)
-	addQuat(6, 3,4,7)
-	addQuat(7, 3,6,5)
-end
---]]
+-- TODO make nodes for octonions ... if m>=3
+-- TODO make nodes for sedenions if m >= 4
+
 
 local weightFunc = |i,j| sparseWeights[i]?[j] or 0
 print(require 'matrix'{#nodes,#nodes}:lambda(weightFunc))
