@@ -2,12 +2,33 @@
 local ForceDirectedGraph = require 'force-directed-graph'
 local CayleyDickson = require 'cayley-dickson'
 
+
 -- CLI options:
-local useEdgesBetweenQuatBasis = cmdline.useEdgesBetweenQuatBasis ?? false	-- if this is true, it just makes a dense graph among all basis elements
-local useQuaternionNodes = cmdline.useQuaternionNodes ?? true
-local showEsInQs = cmdline.showEsInQs ?? false
 
 local m = assert(tonumber(... or 2), "expected <n>")
+
+-- if two e's have a q in common then put an edge between the e's
+-- if this is true, it just makes a dense graph among all basis elements
+local useEdges_e_to_e_in_q = cmdline.useEdges_e_to_e_in_q ?? false
+
+-- if two e's have a q in common then put an edge from the e to the q
+-- only show quats if we're viewing greater than quats
+local useEdges_e_to_q = cmdline.useEdges_e_to_q ?? m > 2
+
+-- add the e's indexes to the q's name
+local showEsInQsName = cmdline.showEsInQsName ?? false
+
+
+local useEdges_e_to_e_in_o = cmdline.useEdges_e_to_e_in_o ?? false
+
+-- only show octs if we are viewing greater than octs
+local useEdges_e_to_o = cmdline.useEdges_e_to_o ?? m > 3
+
+local showEsInOsName = cmdline.showEsInOsName ?? false
+
+
+
+
 local c = CayleyDickson(m)
 print(c)
 local n = #c-1
@@ -30,45 +51,100 @@ local nodes = range(n):mapi(|i| 'e'..i)
 
 -- make nodes for all quaternions
 -- TODO only for m>=2
-local qForSig = table()
+local qForSig = {}
 local qNames = table()
-local qTriplets = table()
+local q_eIndexes = table()
 -- how to search ...
 -- within octonions, searching upper-triangular preserves dual order
 -- further, within sedenions, the order does not match.
 -- if we searched lower-triangular then the order would match in sedeniosn but would not preserve dual order...
 for i=1,n-1 do
 	for j=i+1,n do
-		local k = (e[i] * e[j]).index
-		local qsig = table{i,j,k}:sort():concat','
-		if not qForSig[qsig] then
-			local q = 'q'..(#qNames+1)
-			if showEsInQs then
-				q ..= '=e'..qsig
-			end
-			qForSig[qsig] = q
+		-- i,j is the start of our quaternion
 
-			if useQuaternionNodes then
-				qNames:insert(q)
-				qTriplets:insert{i,j,k}
-				nodes:insert(q)
-				addBiDirWeight(i, #nodes)
-				addBiDirWeight(j, #nodes)
-				addBiDirWeight(k, #nodes)
+		local k = c[i+1][j+1].index	-- same as (e[i] * e[j]).index
+		local is = table{i,j,k}:sort()
+
+		local sig = is:concat','
+		if not qForSig[sig] then
+			local nodeName = 'q'..(#qNames+1)
+			if showEsInQsName then
+				nodeName ..= '=e'..sig
+			end
+			qForSig[sig] = nodeName
+
+			if useEdges_e_to_q then
+				qNames:insert(nodeName)
+				q_eIndexes:insert(is)
+				nodes:insert(nodeName)
+				for _,i1 in ipairs(is) do
+					addBiDirWeight(i1, #nodes)
+				end
 			end
 		end
 
-		if useEdgesBetweenQuatBasis then
-			addBiDirWeight(i, j)
-			addBiDirWeight(i, k)
-			addBiDirWeight(j, k)
+		if useEdges_e_to_e_in_q then
+			for i1=1,#is do
+				addBiDirWeight(is[i1], is[(i1 % #is) + 1])
+			end
 		end
 	end
 end
 
+-- [[
 -- TODO make nodes for sub-octonions ... if m>=3
 -- ... which we can do by searching all pairs of quaternions ...
 -- TODO make nodes for sedenions if m >= 4
+-- find octonions ...
+local oForSig = {}
+local oNames = table()
+local o_eIndexes = table()
+for i=1,n-2 do
+	for j=i+1,n-1 do
+		local k = c[i+1][j+1].index
+		for l=j+1,n do
+			if k ~= l then
+				-- i,j,k,l is the start of our octonion
+				local iset = {[i]=true, [j]=true, [k]=true, [l]=true}
+				local is = table{i,j,k,l}:sort()
+				-- add all the rest of pairs' products' indexes
+				for i1=1,#is-1 do
+					for j1=i1+1,#is do
+						iset[c[is[i1]+1][is[j1]+1].index] = true
+					end
+				end
+				-- by now we should have exactly 7
+				is = table.keys(iset):sort()
+				assert.len(is, 7)
+
+				local sig = is:concat','
+				if not oForSig[sig] then
+					local nodeName = 'o'..(#oNames+1)
+					if showEsInOsName then
+						nodeName ..= '=e'..sig
+					end
+					oForSig[sig] = nodeName
+
+					if useEdges_e_to_o then
+						oNames:insert(nodeName)
+						o_eIndexes:insert(is)
+						nodes:insert(nodeName)
+						for _,i1 in ipairs(is) do
+							addBiDirWeight(i1, #nodes)
+						end
+					end
+				end
+
+				if useEdges_e_to_e_in_o then
+					for i1=1,#is do
+						addBiDirWeight(is[i1], is[(i1 % #is) + 1])
+					end
+				end
+			end
+		end
+	end
+end
+--]]
 
 
 local weightFunc = |i,j| sparseWeights[i]?[j] or 0
