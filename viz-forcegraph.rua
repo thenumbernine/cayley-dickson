@@ -2,31 +2,59 @@
 local ForceDirectedGraph = require 'force-directed-graph'
 local CayleyDickson = require 'cayley-dickson'
 
+local useEdgesBetweenQuatBasis = false	-- if this is true, it just makes a dense graph among all basis elements
+local useQuaternionNodes = true
+
 local m = assert(tonumber(... or 2), "expected <n>")
 local c = CayleyDickson(m)
 print(c)
 local n = #c-1
 
-local nodes = range(n):mapi(|i| 'e'..i)
+-- e[1]..e[n] = e1..en (excluding e0)
+local e = table(c[1]):sub(2)
 
-if m == 3 then-- also link to quaternion triplets
-	nodes:append(range(n):mapi(|i| 'q'..i))
+-- build 'sparseWeights[from][to]' then use it to build 'weights'
+local sparseWeights = table()
+
+local addBiDirWeight = |i,j|do
+	sparseWeights[i] = sparseWeights[i] or table()
+	sparseWeights[i][j] = 1
+	sparseWeights[j] = sparseWeights[j] or table()
+	sparseWeights[j][i] = 1
 end
 
-local weights = range(#nodes):mapi(|i| range(#nodes):mapi(|j| 0))
+-- make nodes for all basis elements
+local nodes = range(n):mapi(|i| 'e'..i)
 
--- link between nodes, but honestly it is every node, since all nodes can multiply with al other nodes
-if m ~= 3 then
-	for i=1,n do
-		for j=1,n do
-			if not c[i+1][j+1].negative then
-				weights[i][j] = 1
-				weights[j][c[i+1][j+1].index] = 1
+-- make nodes for all quaternions
+local qForSig = table()
+local qs = table()
+for i=1,n-1 do
+	for j=i+1,n do
+		local k = (e[i] * e[j]).index
+		local qsig = table{i,j,k}:sort():concat','
+		if not qForSig[qsig] then
+			local q = 'q'..(#qs+1)..'=e'..qsig
+			qForSig[qsig] = q
+
+			if useQuaternionNodes then
+				qs:insert(q)
+				nodes:insert(q)
+				addBiDirWeight(i, #nodes)
+				addBiDirWeight(j, #nodes)
+				addBiDirWeight(k, #nodes)
 			end
+		end
+
+		if useEdgesBetweenQuatBasis then
+			addBiDirWeight(i, j)
+			addBiDirWeight(i, k)
+			addBiDirWeight(j, k)
 		end
 	end
 end
 
+--[[
 -- now link from each node to its respective triplet
 -- TODO how to deduce this automatically. .. its in another script ...
 if m == 3 then
@@ -43,11 +71,13 @@ if m == 3 then
 	addQuat(6, 3,4,7)
 	addQuat(7, 3,6,5)
 end
+--]]
 
-print(tolua(weights))
+local weightFunc = |i,j| sparseWeights[i]?[j] or 0
+print(require 'matrix'{#nodes,#nodes}:lambda(weightFunc))
 
 local app = ForceDirectedGraph{
 	nodes = nodes,
-	weights = weights,
+	weights = weightFunc,
 }
 return app:run()
