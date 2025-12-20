@@ -2,9 +2,10 @@
 local ForceDirectedGraph = require 'force-directed-graph'
 local CayleyDickson = require 'cayley-dickson'
 
--- CLI these plz:
-local useEdgesBetweenQuatBasis = false	-- if this is true, it just makes a dense graph among all basis elements
-local useQuaternionNodes = true
+-- CLI options:
+local useEdgesBetweenQuatBasis = cmdline.useEdgesBetweenQuatBasis ?? false	-- if this is true, it just makes a dense graph among all basis elements
+local useQuaternionNodes = cmdline.useQuaternionNodes ?? true
+local showEsInQs = cmdline.showEsInQs ?? false
 
 local m = assert(tonumber(... or 2), "expected <n>")
 local c = CayleyDickson(m)
@@ -31,12 +32,19 @@ local nodes = range(n):mapi(|i| 'e'..i)
 -- TODO only for m>=2
 local qForSig = table()
 local qs = table()
+-- how to search ...
+-- within octonions, searching upper-triangular preserves dual order
+-- further, within sedenions, the order does not match.
+-- if we searched lower-triangular then the order would match in sedeniosn but would not preserve dual order...
 for i=1,n-1 do
 	for j=i+1,n do
 		local k = (e[i] * e[j]).index
 		local qsig = table{i,j,k}:sort():concat','
 		if not qForSig[qsig] then
 			local q = 'q'..(#qs+1)
+			if showEsInQs then
+				q ..= '=e'..qsig
+			end
 			qForSig[qsig] = q
 
 			if useQuaternionNodes then
@@ -56,7 +64,8 @@ for i=1,n-1 do
 	end
 end
 
--- TODO make nodes for octonions ... if m>=3
+-- TODO make nodes for sub-octonions ... if m>=3
+-- ... which we can do by searching all pairs of quaternions ...
 -- TODO make nodes for sedenions if m >= 4
 
 
