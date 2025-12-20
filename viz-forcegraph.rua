@@ -41,36 +41,63 @@ local e = table(c[1]):sub(2)
 -- build 'sparseWeights[from][to]' then use it to build 'weights'
 local sparseWeights = table()
 
+-- make nodes for all basis elements
+local nodes = table() 
+local nodeIndexForIdent = {}
+
+
 local addBiDirWeight = |i,j|do
+--print(nodes[i].name..' <-> '..nodes[j].name)
 	sparseWeights[i] ??= table()
 	sparseWeights[i][j] = 1
 	sparseWeights[j] ??= table()
 	sparseWeights[j][i] = 1
 end
 
--- make nodes for all basis elements
-local nodes = range(n):mapi(|i| {
-	name = 'e'..i,
-	color = vec3f(1,1,0),
-})
 
-local nodeIndexForIdent = {}
+local makeOrFindBasis = |eIndex|do
+	local eIndexStr = tostring(eIndex)
+	local nodeIdent = 'e'..eIndexStr
+	local eNodeIndex = nodeIndexForIdent[nodeIdent]
+	local new
+	if not eNodeIndex then
+		new = true
+		local nodeName = 'e'..eIndex
+		nodes:insert{
+			name = nodeName,
+			color = vec3f(1,1,0),
+		}
+		eNodeIndex = #nodes
+		nodeIndexForIdent[nodeIdent] = eNodeIndex
+	end
+	return eNodeIndex, new
+end
 
+if useEdges_e_to_q
+or useEdges_e_to_o
+or useEdges_e_to_e_in_q
+or useEdges_e_to_e_in_o
+then
+	for i=1,n do
+		makeOrFindBasis(i)
+	end
+end
 
 local getQuatSeq = |i,j| do
 	-- i,j is the start of our quaternion
 	local k = c[i+1][j+1].index	-- same as (e[i] * e[j]).index
-	local eIndexesInQ = table{i,j,k}:sort()
-	return eIndexesInQ
+	return table{i,j,k}:sort()
 end
 
 -- make nodes for all quaternions
 local qNames = table()	-- track unique count of qs for indexing qs
-local makeOrFindQuat = |eIndexesInQ| do
-	local eIndexStr = eIndexesInQ:concat','
+local makeOrFindQuat = |indexesOfEsInQ| do
+	local eIndexStr = indexesOfEsInQ:concat','
 	local nodeIdent = 'q'..eIndexStr
 	local qNodeIndex = nodeIndexForIdent[nodeIdent]
+	local new
 	if not qNodeIndex then
+		new = true
 		local nodeName = 'q'..(#qNames+1)
 		if showEsInQsName then
 			nodeName ..= '=e'..eIndexStr
@@ -85,7 +112,7 @@ local makeOrFindQuat = |eIndexesInQ| do
 		nodeIndexForIdent[nodeIdent] = qNodeIndex
 	end
 
-	return qNodeIndex
+	return qNodeIndex, new
 end
 
 -- how to search ...
@@ -95,19 +122,20 @@ end
 if useEdges_e_to_q or useEdges_e_to_e_in_q then
 	for i=1,n-1 do
 		for j=i+1,n do
-			local eIndexesInQ = getQuatSeq(i,j)
+			local indexesOfEsInQ = getQuatSeq(i,j)
 			if useEdges_e_to_q then
-				local qNodeIndex = makeOrFindQuat(eIndexesInQ)
-				for _,i1 in ipairs(eIndexesInQ) do
-					addBiDirWeight(i1, qNodeIndex)
+				local qNodeIndex, new = makeOrFindQuat(indexesOfEsInQ)
+				if new then
+					for _,i1 in ipairs(indexesOfEsInQ) do
+						addBiDirWeight(i1, qNodeIndex)
+					end
 				end
 			end	
 			if useEdges_e_to_e_in_q then
-				for i1=1,#eIndexesInQ do
-					addBiDirWeight(
-						eIndexesInQ[i1],
-						eIndexesInQ[(i1 % #eIndexesInQ) + 1]
-					)
+				for i1=1,#indexesOfEsInQ-1 do
+					for j1=i1+1,#indexesOfEsInQ do
+						addBiDirWeight(indexesOfEsInQ[i1], indexesOfEsInQ[j1])
+					end
 				end
 			end
 		end
@@ -122,25 +150,28 @@ end
 
 local getOctSeq = |i,j,k,l| do
 	local oiset = {[i]=true, [j]=true, [k]=true, [l]=true}
-	local eIndexesInO = table{i,j,k,l}:sort()
+	local indexesOfEsInO = table{i,j,k,l}:sort()
 	-- add all the rest of pairs' products' indexes
-	for i1=1,#eIndexesInO-1 do
-		for j1=i1+1,#eIndexesInO do
-			oiset[c[eIndexesInO[i1]+1][eIndexesInO[j1]+1].index] = true
+	for i1=1,#indexesOfEsInO-1 do
+		for j1=i1+1,#indexesOfEsInO do
+			local k1 = c[indexesOfEsInO[i1]+1][indexesOfEsInO[j1]+1].index
+			oiset[k1] = true
 		end
 	end
 	-- by now we should have exactly 7
-	eIndexesInO = table.keys(oiset):sort()
-	assert.len(eIndexesInO, 7)
-	return eIndexesInO
+	indexesOfEsInO = table.keys(oiset):sort()
+	assert.len(indexesOfEsInO, 7)
+	return indexesOfEsInO
 end
 
 local oNames = table()
-local makeOrFindOct = |eIndexesInO| do
-	local eIndexStr = eIndexesInO:concat','
+local makeOrFindOct = |indexesOfEsInO| do
+	local eIndexStr = indexesOfEsInO:concat','
 	local nodeIdent = 'o'..eIndexStr 
 	local oNodeIndex = nodeIndexForIdent[nodeIdent]
+	local new
 	if not oNodeIndex then
+		new = true
 		local nodeName = 'o'..(#oNames+1)
 		if showEsInOsName then
 			nodeName ..= '=e'..eIndexStr
@@ -155,7 +186,7 @@ local makeOrFindOct = |eIndexesInO| do
 		nodeIndexForIdent[nodeIdent] = oNodeIndex
 	end
 
-	return oNodeIndex
+	return oNodeIndex, new
 end
 
 if useEdges_e_to_o
@@ -169,37 +200,36 @@ then
 				if k ~= l then
 					-- i,j,k could be a sole quaternion if e[i]*e[j]=+-e[k]
 					-- so use i,j,k,l to start our octonion search:
-					local eIndexesInO = getOctSeq(i,j,k,l)
-
+					local indexesOfEsInO = getOctSeq(i,j,k,l)
 					if useEdges_e_to_o
 					or useEdges_q_to_o
 					then
-						local oNodeIndex = makeOrFindOct(eIndexesInO)
-						if useEdges_e_to_o then
-							for _,i1 in ipairs(eIndexesInO) do
-								addBiDirWeight(i1, oNodeIndex)
+						local oNodeIndex, new = makeOrFindOct(indexesOfEsInO)
+						if new then
+							if useEdges_e_to_o then
+								for _,i1 in ipairs(indexesOfEsInO) do
+									addBiDirWeight(i1, oNodeIndex)
+								end
 							end
-						end
-					
-						if useEdges_q_to_o then
-							for i1=1,#eIndexesInO do
-								local j1 = (i1 % #eIndexesInO) + 1
-								local eIndexesInQ = getQuatSeq(
-									eIndexesInO[i1],
-									eIndexesInO[j1]
-								)
-								local qNodeIndex = makeOrFindQuat(eIndexesInQ)
-								addBiDirWeight(qNodeIndex, oNodeIndex)
+							if useEdges_q_to_o then
+								for i1=1,#indexesOfEsInO-1 do
+									for j1=i1+1,#indexesOfEsInO do
+										local indexesOfEsInQ = getQuatSeq(
+											indexesOfEsInO[i1],
+											indexesOfEsInO[j1]
+										)
+										local qNodeIndex = makeOrFindQuat(indexesOfEsInQ)
+										addBiDirWeight(qNodeIndex, oNodeIndex)
+									end
+								end
 							end
 						end
 					end
-
 					if useEdges_e_to_e_in_o then
-						for i1=1,#eIndexesInO do
-							addBiDirWeight(
-								eIndexesInO[i1],
-								eIndexesInO[(i1 % #eIndexesInO) + 1]
-							)
+						for i1=1,#indexesOfEsInO-1 do
+							for j1=i1+1,#indexesOfEsInO do
+								addBiDirWeight(indexesOfEsInO[i1], indexesOfEsInO[j1])
+							end
 						end
 					end
 				end
