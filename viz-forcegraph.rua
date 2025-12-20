@@ -39,19 +39,19 @@ local n = #c-1
 local e = table(c[1]):sub(2)
 
 -- build 'sparseWeights[from][to]' then use it to build 'weights'
-local sparseWeights = table()
+local sparseWeights = {}
 
 -- make nodes for all basis elements
 local nodes = table() 
 local nodeIndexForIdent = {}
 
 
-local addBiDirWeight = |i,j|do
+local addBiDirWeight = |i,j, weightClass|do
 --print(nodes[i].name..' <-> '..nodes[j].name)
-	sparseWeights[i] ??= table()
-	sparseWeights[i][j] = 1
-	sparseWeights[j] ??= table()
-	sparseWeights[j][i] = 1
+	sparseWeights[i] = sparseWeights[i] or {}
+	sparseWeights[i][j] = weightClass
+	sparseWeights[j] = sparseWeights[j] or {}
+	sparseWeights[j][i] = weightClass
 end
 
 
@@ -127,14 +127,14 @@ if useEdges_e_to_q or useEdges_e_to_e_in_q then
 				local qNodeIndex, new = makeOrFindQuat(indexesOfEsInQ)
 				if new then
 					for _,i1 in ipairs(indexesOfEsInQ) do
-						addBiDirWeight(i1, qNodeIndex)
+						addBiDirWeight(i1, qNodeIndex, 'e_q')
 					end
 				end
 			end	
 			if useEdges_e_to_e_in_q then
 				for i1=1,#indexesOfEsInQ-1 do
 					for j1=i1+1,#indexesOfEsInQ do
-						addBiDirWeight(indexesOfEsInQ[i1], indexesOfEsInQ[j1])
+						addBiDirWeight(indexesOfEsInQ[i1], indexesOfEsInQ[j1], 'e_e_q')
 					end
 				end
 			end
@@ -208,7 +208,7 @@ then
 						if new then
 							if useEdges_e_to_o then
 								for _,i1 in ipairs(indexesOfEsInO) do
-									addBiDirWeight(i1, oNodeIndex)
+									addBiDirWeight(i1, oNodeIndex, 'e_o')
 								end
 							end
 							if useEdges_q_to_o then
@@ -219,7 +219,7 @@ then
 											indexesOfEsInO[j1]
 										)
 										local qNodeIndex = makeOrFindQuat(indexesOfEsInQ)
-										addBiDirWeight(qNodeIndex, oNodeIndex)
+										addBiDirWeight(qNodeIndex, oNodeIndex, 'q_o')
 									end
 								end
 							end
@@ -228,7 +228,7 @@ then
 					if useEdges_e_to_e_in_o then
 						for i1=1,#indexesOfEsInO-1 do
 							for j1=i1+1,#indexesOfEsInO do
-								addBiDirWeight(indexesOfEsInO[i1], indexesOfEsInO[j1])
+								addBiDirWeight(indexesOfEsInO[i1], indexesOfEsInO[j1], 'e_e_o')
 							end
 						end
 					end
@@ -239,11 +239,40 @@ then
 end
 --]]
 
+local weightsForEdgeNames = table{
+	--'e_e',	-- e-to-e (i don't use this)
+	'e_q',		-- e-to-q
+	'e_e_q',	-- e-to-e when q is in common
+	'e_o',		-- e-to-o
+	'e_e_o',	-- e-to-e when o is in common
+	--'q_q',	-- q-to-q (i don't use this)
+	'q_o',		-- q-to-o
+	--'o_o',	-- o-to-o (i don't use this)
+}
+local weightsForEdgeValues = weightsForEdgeNames:mapi(|name| (1, name))
 
-local weightFunc = |i,j| sparseWeights[i]?[j] or 0
+local weightFunc = |i,j| do
+	local col = sparseWeights[i]
+	if not col then return 0 end
+	local edgeClass = col[j] 
+	if not edgeClass then return 0 end
+	return weightsForEdgeValues[edgeClass] or 0
+end
 --print(require 'matrix'{#nodes,#nodes}:lambda(weightFunc))
 
-local app = ForceDirectedGraph{
+local ig = require 'imgui'
+
+local MuhForceDirectedGraph = ForceDirectedGraph:subclass()
+
+MuhForceDirectedGraph.updateGUI = |:|do
+	MuhForceDirectedGraph.super.updateGUI(self)
+
+	for _,name in ipairs(weightsForEdgeNames) do
+		ig.luatableInputFloat(name, weightsForEdgeValues, name)
+	end
+end
+
+local app = MuhForceDirectedGraph{
 	nodes = nodes,
 	weights = weightFunc,
 }
