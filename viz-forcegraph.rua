@@ -42,9 +42,9 @@ local e = table(c[1]):sub(2)
 local sparseWeights = table()
 
 local addBiDirWeight = |i,j|do
-	sparseWeights[i] = sparseWeights[i] or table()
+	sparseWeights[i] ??= table()
 	sparseWeights[i][j] = 1
-	sparseWeights[j] = sparseWeights[j] or table()
+	sparseWeights[j] ??= table()
 	sparseWeights[j][i] = 1
 end
 
