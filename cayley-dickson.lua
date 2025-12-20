@@ -89,22 +89,26 @@ function CayleyDickson:element(args)
 end
 
 function CayleyDickson:__tostring()
-	local s = ''
+	local maxIndexLen = #tostring(#self)
 	local x = #self
+	local s = (' '):rep(maxIndexLen + 3)
 	for j=0,x-1 do
-		s=s..'\te'..j
+		local sj = tostring(j)
+		s = s .. 'e' .. sj .. (' '):rep(maxIndexLen - #sj + 2)
 	end
-	s=s..'\n'
+	s = s .. '\n'
 	for i=0,x-1 do
-		s=s..'e'..i
+		local si = tostring(i)
+		s = s .. 'e' .. si .. (' '):rep(maxIndexLen - #si)
 		for j=0,x-1 do
-			local index = self[i+1][j+1].index
+			local k = self[i+1][j+1].index
+			local sk = tostring(k)
 			local negative = self[i+1][j+1].negative
-			s=s..'\t'..(negative == true and '-' or '')..'e'..index
+			s = s .. ' '..(negative == true and '-' or ' ')..'e'..sk .. (' '):rep(maxIndexLen - #sk)
 		end
-		s=s..'\n'
+		s = s .. '\n'
 	end
-	s=s..'\n'
+	s = s .. '\n'
 	return s
 end
 

@@ -31,7 +31,8 @@ local nodes = range(n):mapi(|i| 'e'..i)
 -- make nodes for all quaternions
 -- TODO only for m>=2
 local qForSig = table()
-local qs = table()
+local qNames = table()
+local qTriplets = table()
 -- how to search ...
 -- within octonions, searching upper-triangular preserves dual order
 -- further, within sedenions, the order does not match.
@@ -41,14 +42,15 @@ for i=1,n-1 do
 		local k = (e[i] * e[j]).index
 		local qsig = table{i,j,k}:sort():concat','
 		if not qForSig[qsig] then
-			local q = 'q'..(#qs+1)
+			local q = 'q'..(#qNames+1)
 			if showEsInQs then
 				q ..= '=e'..qsig
 			end
 			qForSig[qsig] = q
 
 			if useQuaternionNodes then
-				qs:insert(q)
+				qNames:insert(q)
+				qTriplets:insert{i,j,k}
 				nodes:insert(q)
 				addBiDirWeight(i, #nodes)
 				addBiDirWeight(j, #nodes)
@@ -70,7 +72,7 @@ end
 
 
 local weightFunc = |i,j| sparseWeights[i]?[j] or 0
-print(require 'matrix'{#nodes,#nodes}:lambda(weightFunc))
+--print(require 'matrix'{#nodes,#nodes}:lambda(weightFunc))
 
 local app = ForceDirectedGraph{
 	nodes = nodes,
