@@ -13,7 +13,7 @@ local useEdges_e_to_e_in_q = cmdline.useEdges_e_to_e_in_q ?? false
 
 -- if two e's have a q in common then put an edge from the e to the q
 -- only show quats if we're viewing greater than quats
-local useEdges_e_to_q = cmdline.useEdges_e_to_q ?? m > 2
+local useEdges_e_to_q = cmdline.useEdges_e_to_q ?? m >= 3
 
 -- add the e's indexes to the q's name
 local showEsInQsName = cmdline.showEsInQsName ?? false
@@ -22,7 +22,9 @@ local showEsInQsName = cmdline.showEsInQsName ?? false
 local useEdges_e_to_e_in_o = cmdline.useEdges_e_to_e_in_o ?? false
 
 -- only show octs if we are viewing greater than octs
-local useEdges_e_to_o = cmdline.useEdges_e_to_o ?? m > 3
+local useEdges_e_to_o = cmdline.useEdges_e_to_o ?? m >= 4
+
+local useEdges_q_to_o = cmdline.useEdges_q_to_o ?? m >= 4
 
 local showEsInOsName = cmdline.showEsInOsName ?? false
 
@@ -49,43 +51,59 @@ end
 -- make nodes for all basis elements
 local nodes = range(n):mapi(|i| 'e'..i)
 
+local nodeIndexForIdent = {}
+
+
+local getQuatSeq = |i,j| do
+	-- i,j is the start of our quaternion
+	local k = c[i+1][j+1].index	-- same as (e[i] * e[j]).index
+	local eIndexesInQ = table{i,j,k}:sort()
+	return eIndexesInQ
+end
+
 -- make nodes for all quaternions
--- TODO only for m>=2
-local qForSig = {}
-local qNames = table()
-local q_eIndexes = table()
+local qNames = table()	-- track unique count of qs for indexing qs
+local makeOrFindQuat = |eIndexesInQ| do
+	local eIndexStr = eIndexesInQ:concat','
+	local nodeIdent = 'q'..eIndexStr
+	local qNodeIndex = nodeIndexForIdent[nodeIdent]
+	if not qNodeIndex then
+		local nodeName = 'q'..(#qNames+1)
+		if showEsInQsName then
+			nodeName ..= '=e'..eIndexStr
+		end
+
+		qNames:insert(nodeName)
+		nodes:insert(nodeName)
+
+		qNodeIndex = #nodes
+		nodeIndexForIdent[nodeIdent] = qNodeIndex
+	end
+
+	return qNodeIndex
+end
+
 -- how to search ...
 -- within octonions, searching upper-triangular preserves dual order
 -- further, within sedenions, the order does not match.
 -- if we searched lower-triangular then the order would match in sedeniosn but would not preserve dual order...
-for i=1,n-1 do
-	for j=i+1,n do
-		-- i,j is the start of our quaternion
-
-		local k = c[i+1][j+1].index	-- same as (e[i] * e[j]).index
-		local is = table{i,j,k}:sort()
-
-		local sig = is:concat','
-		if not qForSig[sig] then
-			local nodeName = 'q'..(#qNames+1)
-			if showEsInQsName then
-				nodeName ..= '=e'..sig
-			end
-			qForSig[sig] = nodeName
-
+if useEdges_e_to_q or useEdges_e_to_e_in_q then
+	for i=1,n-1 do
+		for j=i+1,n do
+			local eIndexesInQ = getQuatSeq(i,j)
 			if useEdges_e_to_q then
-				qNames:insert(nodeName)
-				q_eIndexes:insert(is)
-				nodes:insert(nodeName)
-				for _,i1 in ipairs(is) do
-					addBiDirWeight(i1, #nodes)
+				local qNodeIndex = makeOrFindQuat(eIndexesInQ)
+				for _,i1 in ipairs(eIndexesInQ) do
+					addBiDirWeight(i1, qNodeIndex)
 				end
-			end
-		end
-
-		if useEdges_e_to_e_in_q then
-			for i1=1,#is do
-				addBiDirWeight(is[i1], is[(i1 % #is) + 1])
+			end	
+			if useEdges_e_to_e_in_q then
+				for i1=1,#eIndexesInQ do
+					addBiDirWeight(
+						eIndexesInQ[i1],
+						eIndexesInQ[(i1 % #eIndexesInQ) + 1]
+					)
+				end
 			end
 		end
 	end
@@ -96,48 +114,85 @@ end
 -- ... which we can do by searching all pairs of quaternions ...
 -- TODO make nodes for sedenions if m >= 4
 -- find octonions ...
-local oForSig = {}
+
+local getOctSeq = |i,j,k,l| do
+	local oiset = {[i]=true, [j]=true, [k]=true, [l]=true}
+	local eIndexesInO = table{i,j,k,l}:sort()
+	-- add all the rest of pairs' products' indexes
+	for i1=1,#eIndexesInO-1 do
+		for j1=i1+1,#eIndexesInO do
+			oiset[c[eIndexesInO[i1]+1][eIndexesInO[j1]+1].index] = true
+		end
+	end
+	-- by now we should have exactly 7
+	eIndexesInO = table.keys(oiset):sort()
+	assert.len(eIndexesInO, 7)
+	return eIndexesInO
+end
+
 local oNames = table()
-local o_eIndexes = table()
-for i=1,n-2 do
-	for j=i+1,n-1 do
-		local k = c[i+1][j+1].index
-		for l=j+1,n do
-			if k ~= l then
-				-- i,j,k,l is the start of our octonion
-				local iset = {[i]=true, [j]=true, [k]=true, [l]=true}
-				local is = table{i,j,k,l}:sort()
-				-- add all the rest of pairs' products' indexes
-				for i1=1,#is-1 do
-					for j1=i1+1,#is do
-						iset[c[is[i1]+1][is[j1]+1].index] = true
-					end
-				end
-				-- by now we should have exactly 7
-				is = table.keys(iset):sort()
-				assert.len(is, 7)
+local makeOrFindOct = |eIndexesInO| do
+	local eIndexStr = eIndexesInO:concat','
+	local nodeIdent = 'o'..eIndexStr 
+	local oNodeIndex = nodeIndexForIdent[nodeIdent]
+	if not oNodeIndex then
+		local nodeName = 'o'..(#oNames+1)
+		if showEsInOsName then
+			nodeName ..= '=e'..eIndexStr
+		end
+		
+		oNames:insert(nodeName)
+		nodes:insert(nodeName)
+		oNodeIndex = #nodes
+		nodeIndexForIdent[nodeIdent] = oNodeIndex
+	end
 
-				local sig = is:concat','
-				if not oForSig[sig] then
-					local nodeName = 'o'..(#oNames+1)
-					if showEsInOsName then
-						nodeName ..= '=e'..sig
-					end
-					oForSig[sig] = nodeName
+	return oNodeIndex
+end
 
-					if useEdges_e_to_o then
-						oNames:insert(nodeName)
-						o_eIndexes:insert(is)
-						nodes:insert(nodeName)
-						for _,i1 in ipairs(is) do
-							addBiDirWeight(i1, #nodes)
+if useEdges_e_to_o
+or useEdges_q_to_o
+or useEdges_e_to_e_in_o
+then
+	for i=1,n-2 do
+		for j=i+1,n-1 do
+			local k = c[i+1][j+1].index
+			for l=j+1,n do
+				if k ~= l then
+					-- i,j,k could be a sole quaternion if e[i]*e[j]=+-e[k]
+					-- so use i,j,k,l to start our octonion search:
+					local eIndexesInO = getOctSeq(i,j,k,l)
+
+					if useEdges_e_to_o
+					or useEdges_q_to_o
+					then
+						local oNodeIndex = makeOrFindOct(eIndexesInO)
+						if useEdges_e_to_o then
+							for _,i1 in ipairs(eIndexesInO) do
+								addBiDirWeight(i1, oNodeIndex)
+							end
+						end
+					
+						if useEdges_q_to_o then
+							for i1=1,#eIndexesInO do
+								local j1 = (i1 % #eIndexesInO) + 1
+								local eIndexesInQ = getQuatSeq(
+									eIndexesInO[i1],
+									eIndexesInO[j1]
+								)
+								local qNodeIndex = makeOrFindQuat(eIndexesInQ)
+								addBiDirWeight(qNodeIndex, oNodeIndex)
+							end
 						end
 					end
-				end
 
-				if useEdges_e_to_e_in_o then
-					for i1=1,#is do
-						addBiDirWeight(is[i1], is[(i1 % #is) + 1])
+					if useEdges_e_to_e_in_o then
+						for i1=1,#eIndexesInO do
+							addBiDirWeight(
+								eIndexesInO[i1],
+								eIndexesInO[(i1 % #eIndexesInO) + 1]
+							)
+						end
 					end
 				end
 			end
