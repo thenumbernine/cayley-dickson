@@ -63,7 +63,7 @@ function Element.__eq(a,b)
 end
 
 function Element:__tostring()
-	return (self.negative and '-' or '') .. 'e' .. self.index
+	return (self.negative and '-' or '') .. 'e' .. tostring(self.index)
 end
 
 Element.__concat = string.concat

@@ -12,24 +12,29 @@ local CayleyDickson = require 'cayley-dickson'
 
 local mod1 = |x, p| ((x-1) % p + 1)		-- modulo of 1-based indexes
 
+local tablesAreEqual = |a,b| do
+	if #a ~= #b then return false end
+	for i=1,#a do
+		if a[i] ~= b[i] then return false end
+	end
+	return true
+end
+
 local c = CayleyDickson(4)
 print(c)
 
 local es = table(c[1])
 es:remove(1)
 
--- hex is only useful for sedenions
---local shortname = |e| ((e.negative and '-' or '') .. e.index:hex())
--- so here is an arbitrary base to guarantee only 1 digit:
 local shortname = |e| ((e.negative and '-' or '') .. tostring(e.index))
 
-local allQuats = c:getTriplets()
-
+-- TODO TODO TODO try reindexing by searching for sub-octonions in-order then searching sub-quaternions of each sub-octonion in-order
 print'quaternions:'
+local allQuats = c:getTriplets()
 for i,q in ipairs(allQuats) do
-	print('q_'..tostring(i)..' = ('..table.mapi(q, |e|
+	print('q'..tostring(i)..' = ('..table.mapi(q, |e|
 		--tostring(e) -- base-10
-		'e_'..tostring(e.index) -- base-whatever
+		'e'..tostring(e.index) -- base-whatever
 	):concat', '..')')
 end
 
@@ -61,12 +66,12 @@ end
 -- find the quaternion index
 -- returns the index and the original-stored quat (in case you are searching for a permutation of the original)
 -- I'm sure I have this same function below somewhere....
-local qFindIndex = |q|
-	allQuats:find(nil, |q2| do
-		local a1,b1,c1 = table.mapi(q, |e| e.index):sort():unpack()
-		local a2,b2,c2 = table.mapi(q2, |e| e.index):sort():unpack()
-		return a1 == a2 and b1 == b2 and c1 == c2
-	end)
+local qFindIndex = |q| do
+	local qeindexes = table.mapi(q, |e| e.index):sort()
+	return allQuats:find(nil, |q2|
+		tablesAreEqual(qeindexes, table.mapi(q2, |e| e.index):sort())
+	)
+end
 
 local q_e_name = |q| do
 	-- shows #s of es, no separator so only good if they are 1 digit long
@@ -77,14 +82,17 @@ local q_e_name = |q| do
 		..'=e'..table.mapi(q, shortname):concat''
 end
 
+print()
+print('per each basis, list of quaternions containing it:')
 for i,e in ipairs(es) do
-	io.write('quaternions of e'..shortname(e)..':')
+	io.write('e'..shortname(e)..':')
 	for _,q in ipairs(getQuaternionTriplets(e)) do
 		--io.write(' '..q_e_name(q))
 		io.write(' q'..tostring(qFindIndex(q)))
 	end
 	print()
 end
+
 
 -- this is supposed to be the map from (ei,ej) to q=(ei,ej,ei*ej)
 local quatMap = table()
@@ -104,15 +112,17 @@ for i,ei in ipairs(es) do
 	end
 end
 
-print'quaternions of ei * ej:'
+print()
+print'quaternion containing ei, ej, ei*ej:'
 for i,ei in ipairs(es) do
 	print(range(#quatMap[1]):mapi(|j| do
 		local qij = quatMap[i][j]
-		return qij and tostring(qFindIndex(qij)) or '.'
+		return qij and 'q'..tostring(qFindIndex(qij)) or '..'
 	end):concat' ')
 end
 
-print'elements of quaternions of ei * ej:'
+print()
+print'elements of quaternion containing ei,ej,ei*ej:'
 for i,ei in ipairs(es) do
 	print(range(#quatMap[1]):mapi(|j| do
 		local qij = quatMap[i][j]
@@ -120,19 +130,12 @@ for i,ei in ipairs(es) do
 			--and table.map(qij, |e| e.index):concat()
 			--and table.map(qij, shortname):concat()
 			and q_e_name(qij)
-			or '......'
+			or '.......'
 	end):concat' ')
 end
 
+print()
 print('unique mobius octonions in sedenions:')
-local tablesAreEqual = |a,b| do
-	if #a ~= #b then return false end
-	for i=1,#a do
-		if a[i] ~= b[i] then return false end
-	end
-	return true
-end
-
 -- offsets of indexes to form quaternions within the mobius strip
 local quaternionInOctonionOffsets = table{0,1,3}
 local fillMobius = |offsets, getSub, ...|do
@@ -191,7 +194,7 @@ local dontOmitIsomorphisms = false
 
 local mobiusStrips = ||do
 	local allOctonionsInSedenion = table()
-	local uniqueset = table()
+	local uniqueset = {}
 	for m in fillMobius(quaternionInOctonionOffsets, getQuaternionTriplets, initM:unpack()) do
 		local key = m:mapi(|e| e.index):sort():concat'_'
 		if dontOmitIsomorphisms or not uniqueset[key] then
@@ -204,14 +207,16 @@ end
 
 local allOctonionsInSedenion = mobiusStrips()
 for i,m in ipairs(allOctonionsInSedenion) do
-	print('oct #'..i:hex()..': '..m:mapi(shortname):concat' ')
+	print('o'..tostring(i)..': '..m:mapi(tostring):concat' ')
 end
 
-print('number of unique mobius octonions in sedenions:', #allOctonionsInSedenion)
+print()
+print('number of unique mobius octonions in sedenions:', (#allOctonionsInSedenion):tostring(10))
 
 -- now remove the trailing minus-parity octonions
-print('sign-agnostic:')
-local signAgnosticOctInSed = table(allOctonionsInSedenion):mapi(|o| table(o):mapi(|e| e.negative and -e or e))
+local signAgnosticOctInSed = table(allOctonionsInSedenion):mapi(|o|
+	table(o):mapi(|e| e.negative and -e or e)
+)
 for i=1,#signAgnosticOctInSed do
 	local m = signAgnosticOctInSed[i]
 	if #m == 14 then
@@ -222,12 +227,28 @@ for i=1,#signAgnosticOctInSed do
 		signAgnosticOctInSed[i] = m
 	end
 end
-for i,m in ipairs(signAgnosticOctInSed) do
-	print('oct #'..i:hex()..': '..m:mapi(shortname):concat' ')
+
+print()
+print('unique octonions in sedenions, sign-agnostic:')
+for i,o in ipairs(signAgnosticOctInSed) do
+	print('o'..tostring(i)..': '..o:mapi(tostring):concat' ')
+end
+
+print()
+print('quaternions within unique octonions in sedenions:')
+for i,o in ipairs(signAgnosticOctInSed) do
+	io.write('o'..tostring(i)..': ')
+	-- follow the 1,2,4 spacing rule ... but if I wasn't then I wuold have to check every pair within the octonion.
+	for j=1,#o do
+		local qIndex = qFindIndex{o[mod1(j+0,#o)], o[mod1(j+1,#o)], o[mod1(j+3,#o)]}
+		io.write(' q'..tostring(qIndex))
+	end
+	print()
 end
 
 -- now, with allOctonionsInSedenion ...
 -- ... go through each quaternion of e's that are in quaternions of o's ...
+print()
 print('looking for quaternions of octonions that contain each quaternions of basis elements...')
 print('...such that the subsequent has two in common with the previous...')
 print('...and each quaternion of octonions should possess each element once, except the basis quaternion which appears 3 times')
@@ -303,7 +324,10 @@ do
 	local searchForBasisIndexes, sedTriplet
 	searchForBasisIndexes = startIndexes
 	sedTriplet = findOctTripletContainingBasii(searchForBasisIndexes:unpack())
+
+	print()
 	print('quaternion containing '..searchForBasisIndexes:concat' ')
+	-- TODO print the o index as well.
 	for _,o in ipairs(sedTriplet) do
 		print(' '..o:mapi(shortname):concat' ')
 	end
