@@ -1,76 +1,131 @@
 #!/usr/bin/env rua
+
+-- largest 2-binomial coefficient ... plus 1
+local number = require 'ext.number'
+number.base = 36
+number.__tostring = number.tostring
+-- assigning concat doesn't matter when concat a string and number ... you have to explicitly call tostring() ... builtin string __concat must not call number's tostring() ...
+--number.__concat = string.concat
+--number.__concat = |a,b| tostring(a)..tostring(b)
+
 local CayleyDickson = require 'cayley-dickson'
+
+local mod1 = |x, p| ((x-1) % p + 1)		-- modulo of 1-based indexes
 
 local c = CayleyDickson(4)
 print(c)
 
-local mod1 = |x, p| ((x-1) % p + 1)		-- modulo of 1-based indexes
+local es = table(c[1])
+es:remove(1)
 
-local shortname = |e| ((e.negative and '-' or '') .. e.index:hex())
+-- hex is only useful for sedenions
+--local shortname = |e| ((e.negative and '-' or '') .. e.index:hex())
+-- so here is an arbitrary base to guarantee only 1 digit:
+local shortname = |e| ((e.negative and '-' or '') .. tostring(e.index))
 
-local allTriplets = c:getTriplets()
+local allQuats = c:getTriplets()
 
 print'quaternions:'
-for i,t in ipairs(allTriplets) do
-	print('t'..i, table.unpack(t))
+for i,q in ipairs(allQuats) do
+	print('q_'..tostring(i)..' = ('..table.mapi(q, |e|
+		--tostring(e) -- base-10
+		'e_'..tostring(e.index) -- base-whatever
+	):concat', '..')')
 end
 
-local function getQuaternionTriplets(e)
-	local ts = table()
-	for _,t in ipairs(allTriplets) do
-		for j=1,3 do
-			if t[j].index == e.index then
+local getQuaternionTriplets = |e| do
+	local qs = table()
+	for _,q in ipairs(allQuats) do
+		for j=1,#q do
+			if q[j].index == e.index then
 				if e.negative then
-					ts:insert(table{
-						-t[j],
-						t[(j+1)%3+1], 
-						t[j%3+1],
+					qs:insert(table{
+						-q[j],
+						q[mod1(j+2,3)],
+						q[mod1(j+1,3)],
 					})
 				else
-					ts:insert(table{
-						t[j],
-						t[j%3+1],
-						t[(j+1)%3+1],
+					qs:insert(table{
+						q[j],
+						q[mod1(j+1,3)],
+						q[mod1(j+2,3)],
 					})
 				end
 				break
 			end
 		end
 	end
-	return ts
+	return qs
 end
 
-local es = table(c[1])
-es:remove(1)
+-- find the quaternion index
+-- returns the index and the original-stored quat (in case you are searching for a permutation of the original)
+-- I'm sure I have this same function below somewhere....
+local qFindIndex = |q|
+	allQuats:find(nil, |q2| do
+		local a1,b1,c1 = table.mapi(q, |e| e.index):sort():unpack()
+		local a2,b2,c2 = table.mapi(q2, |e| e.index):sort():unpack()
+		return a1 == a2 and b1 == b2 and c1 == c2
+	end)
+
+local q_e_name = |q| do
+	-- shows #s of es, no separator so only good if they are 1 digit long
+	--return q:mapi(shortname):concat''
+
+	-- same but put the quat index first as well
+	return 'q'..tostring(qFindIndex(q))
+		..'=e'..table.mapi(q, shortname):concat''
+end
 
 for i,e in ipairs(es) do
 	io.write('quaternions of e'..shortname(e)..':')
-	for _,t in ipairs(getQuaternionTriplets(e)) do
-		io.write(' '..t:mapi(shortname):concat'')
+	for _,q in ipairs(getQuaternionTriplets(e)) do
+		--io.write(' '..q_e_name(q))
+		io.write(' q'..tostring(qFindIndex(q)))
 	end
 	print()
 end
 
-print'quaternions of ei * ej:'
-local tripletMap = table()
+-- this is supposed to be the map from (ei,ej) to q=(ei,ej,ei*ej)
+local quatMap = table()
 for i,ei in ipairs(es) do
-	tripletMap[i] = table()
+	quatMap[i] = table()
 	for j,ej in ipairs(es) do
-		local ek = ei * ej
-		tripletMap[i][j] = select(2, allTriplets:find(nil, function(t)
-			return table.find(t, nil, function(ti) return ti.index == ek.index end)
-		end))
+		if i ~= j then
+			local ek = ei * ej
+			--[[
+			local qindex, q = allQuats:find(nil, |q|
+				((table.find(q, nil, |qi| qi.index == ek.index)))
+			)
+			--]]
+			local _,q = qFindIndex{ei,ej,ek}
+			quatMap[i][j] = q
+		end
 	end
-	print(range(#tripletMap[1]):mapi(function(j) 
-		local tij = tripletMap[i][j]	
-		return tij 
-			and table.map(tij, shortname):concat()	--table.map(tij, function(e) return e.index end):concat()
-			or '...'
+end
+
+print'quaternions of ei * ej:'
+for i,ei in ipairs(es) do
+	print(range(#quatMap[1]):mapi(|j| do
+		local qij = quatMap[i][j]
+		return qij and tostring(qFindIndex(qij)) or '.'
+	end):concat' ')
+end
+
+print'elements of quaternions of ei * ej:'
+for i,ei in ipairs(es) do
+	print(range(#quatMap[1]):mapi(|j| do
+		local qij = quatMap[i][j]
+		return qij
+			--and table.map(qij, |e| e.index):concat()
+			--and table.map(qij, shortname):concat()
+			and q_e_name(qij)
+			or '......'
 	end):concat' ')
 end
 
 print('unique mobius octonions in sedenions:')
-local function tablesAreEqual(a,b)
+local tablesAreEqual = |a,b| do
 	if #a ~= #b then return false end
 	for i=1,#a do
 		if a[i] ~= b[i] then return false end
@@ -78,12 +133,13 @@ local function tablesAreEqual(a,b)
 	return true
 end
 
--- offsets of indexes to form triplets within the mobius strip
+-- offsets of indexes to form quaternions within the mobius strip
 local quaternionInOctonionOffsets = table{0,1,3}
-local function fillMobius(offsets, getSub, ...)
+local fillMobius = |offsets, getSub, ...|do
 	local initM = table{...}
-	return coroutine.wrap(function()
-		local function recurse(m)
+	return coroutine.wrap(||do
+		local recurse
+		recurse = |m|do
 			for i=1,math.huge do
 				if not m[i+offsets[1]] then
 					for _,e in ipairs(es) do
@@ -93,7 +149,7 @@ local function fillMobius(offsets, getSub, ...)
 					return
 				elseif not m[i+offsets[2]] then
 					for _,t in ipairs(getSub(m[i+offsets[1]])) do
-						if not m:find(nil, function(t2) return t2.index == t[2].index end) then
+						if not m:find(nil, |t2| t2.index == t[2].index) then
 							m[i+offsets[2]] = t[2]
 							recurse(table(m))
 						end
@@ -107,7 +163,7 @@ local function fillMobius(offsets, getSub, ...)
 							for j=1,#m-offsets[k]-1 do
 								if tablesAreEqual(m:sub(j,j+offsets[k]), m:sub(#m-offsets[k],#m)) then
 									coroutine.yield(m:sub(1,#m-offsets[k]-1))
-									return 
+									return
 								end
 							end
 							m[i+offsets[k]] = t3
@@ -122,7 +178,7 @@ local function fillMobius(offsets, getSub, ...)
 	end)
 end
 
-local initM = table{...}:mapi(function(i)
+local initM = table{...}:mapi(|i|do
 	local neg = i:sub(1,1) == '-'
 	if neg then i = i:sub(2) end
 	i = assert(tonumber(i, 16))
@@ -133,11 +189,11 @@ end)
 
 local dontOmitIsomorphisms = false
 
-local function mobiusStrips()
+local mobiusStrips = ||do
 	local allOctonionsInSedenion = table()
 	local uniqueset = table()
 	for m in fillMobius(quaternionInOctonionOffsets, getQuaternionTriplets, initM:unpack()) do
-		local key = m:mapi(function(e) return e.index end):sort():concat'_'
+		local key = m:mapi(|e| e.index):sort():concat'_'
 		if dontOmitIsomorphisms or not uniqueset[key] then
 			allOctonionsInSedenion:insert(m)
 			uniqueset[key] = true
@@ -153,7 +209,7 @@ end
 
 print('number of unique mobius octonions in sedenions:', #allOctonionsInSedenion)
 
--- now remove the trailing minus-parity rings
+-- now remove the trailing minus-parity octonions
 print('sign-agnostic:')
 local signAgnosticOctInSed = table(allOctonionsInSedenion):mapi(|o| table(o):mapi(|e| e.negative and -e or e))
 for i=1,#signAgnosticOctInSed do
@@ -171,12 +227,12 @@ for i,m in ipairs(signAgnosticOctInSed) do
 end
 
 -- now, with allOctonionsInSedenion ...
--- ... go through each triplet of e's that are in triplets of r's ...
+-- ... go through each quaternion of e's that are in quaternions of o's ...
 print('looking for quaternions of octonions that contain each quaternions of basis elements...')
 print('...such that the subsequent has two in common with the previous...')
-print('...and each triplet of octonions should possess each element once, except the basis triplet which appears 3 times')
+print('...and each quaternion of octonions should possess each element once, except the basis quaternion which appears 3 times')
 do
-	local function findOctTripletContainingBasii(i1, i2, i3)
+	local findOctTripletContainingBasii = |i1, i2, i3|do
 		local results = table()
 		--[[ why is this running away when it works a few lines earlier?
 		for m in fillMobius(quaternionInOctonionOffsets, getQuaternionTriplets, i1, i2, i3) do
@@ -196,7 +252,7 @@ do
 						o[mod1(ofs1+0, 7)],
 						o[mod1(ofs1+6, 7)],
 						o[mod1(ofs1+5, 7)],	-- \
-						o[mod1(ofs1+2, 7)], -- |- these two are interchangeable 
+						o[mod1(ofs1+2, 7)], -- |- these two are interchangeable
 						o[mod1(ofs1+1, 7)], -- /
 						o[mod1(ofs1+3, 7)], -- \_ these two are interchangeable
 						o[mod1(ofs1+4, 7)], -- /
@@ -216,7 +272,7 @@ do
 					}
 					ofs1 = 1
 					ofs2 = 2
-					ofs3 = 4				
+					ofs3 = 4
 				elseif mod1(ofs2+3, #o) == ofs1 then
 					o = {
 						o[mod1(ofs1+0, 7)],
@@ -229,7 +285,7 @@ do
 					}
 					ofs1 = 1
 					ofs2 = 2
-					ofs3 = 4							
+					ofs3 = 4
 				end
 				if mod1(ofs1+1, #o) ~= ofs2 then
 					error("idk this order "..tolua{ofs1=ofs1, ofs2=ofs2, ofs3=ofs3}..' for '..o:mapi(shortname):concat' ')
@@ -245,9 +301,9 @@ do
 	local searchOffsets = table{1,2,4}	-- 1,2,4 == spacing
 
 	local searchForBasisIndexes, sedTriplet
-	searchForBasisIndexes = startIndexes 
+	searchForBasisIndexes = startIndexes
 	sedTriplet = findOctTripletContainingBasii(searchForBasisIndexes:unpack())
-	print('triplet containing '..searchForBasisIndexes:concat' ')
+	print('quaternion containing '..searchForBasisIndexes:concat' ')
 	for _,o in ipairs(sedTriplet) do
 		print(' '..o:mapi(shortname):concat' ')
 	end
@@ -255,7 +311,7 @@ do
 	for iter=1,6 do
 		searchForBasisIndexes = searchOffsets:mapi(|i| sedTriplet[1][i+1].index)
 		sedTriplet = findOctTripletContainingBasii(searchForBasisIndexes:unpack())
-		print('triplet containing '..searchForBasisIndexes:concat' ')
+		print('quaternion containing '..searchForBasisIndexes:concat' ')
 		for _,o in ipairs(sedTriplet) do
 			print(' '..o:mapi(shortname):concat' ')
 		end
@@ -265,8 +321,8 @@ end
 
 
 --[[ TODO fill sedenion mobius ...
-local octonionInSedenionOffsets = {0, 1, 2, 4, 5, 8, 10} 
-local function getSubOctonions(e)
+local octonionInSedenionOffsets = {0, 1, 2, 4, 5, 8, 10}
+local getSubOctonions = |e| do
 	local ts = table()
 	for _,t in ipairs(allOctonionsInSedenion) do
 		for j=1,7 do

@@ -42,7 +42,7 @@ local e = table(c[1]):sub(2)
 local sparseWeights = {}
 
 -- make nodes for all basis elements
-local nodes = table() 
+local nodes = table()
 local nodeIndexForIdent = {}
 
 
@@ -116,9 +116,12 @@ local makeOrFindQuat = |indexesOfEsInQ| do
 end
 
 -- how to search ...
--- within octonions, searching upper-triangular preserves dual order
--- further, within sedenions, the order does not match.
+-- within octonions, searching upper-triangular preserves dual order between basis and quaternions.
+-- within sedenions, searching upper-triangular preserves dual order between basis and octonions.
+-- but within sedenions, searching upper-triangular, the quaternion indexes do not match with the quaternion indexes in octonions.
 -- if we searched lower-triangular then the order would match in sedeniosn but would not preserve dual order...
+-- but in sedenions, if we do match quaternion indexing in octonions, the basis is in 7 quats and quts only have 3 basis, so dual order doesn't matter anyways.
+-- I'll just have to accept that each CD construct's indexing of sub-CD constructs will be unique and not match between CD constructs ... except the basis indexes.
 if useEdges_e_to_q or useEdges_e_to_e_in_q then
 	for i=1,n-1 do
 		for j=i+1,n do
@@ -130,7 +133,7 @@ if useEdges_e_to_q or useEdges_e_to_e_in_q then
 						addBiDirWeight(i1, qNodeIndex, 'e_q')
 					end
 				end
-			end	
+			end
 			if useEdges_e_to_e_in_q then
 				for i1=1,#indexesOfEsInQ-1 do
 					for j1=i1+1,#indexesOfEsInQ do
@@ -167,7 +170,7 @@ end
 local oNames = table()
 local makeOrFindOct = |indexesOfEsInO| do
 	local eIndexStr = indexesOfEsInO:concat','
-	local nodeIdent = 'o'..eIndexStr 
+	local nodeIdent = 'o'..eIndexStr
 	local oNodeIndex = nodeIndexForIdent[nodeIdent]
 	local new
 	if not oNodeIndex then
@@ -176,7 +179,7 @@ local makeOrFindOct = |indexesOfEsInO| do
 		if showEsInOsName then
 			nodeName ..= '=e'..eIndexStr
 		end
-		
+
 		oNames:insert(nodeName)
 		nodes:insert{
 			name = nodeName,
@@ -254,7 +257,7 @@ local weightsForEdgeValues = weightsForEdgeNames:mapi(|name| (1, name))
 local weightFunc = |i,j| do
 	local col = sparseWeights[i]
 	if not col then return 0 end
-	local edgeClass = col[j] 
+	local edgeClass = col[j]
 	if not edgeClass then return 0 end
 	return weightsForEdgeValues[edgeClass] or 0
 end
