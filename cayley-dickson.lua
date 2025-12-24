@@ -4,6 +4,11 @@
 2 = quaternion
 3 = octonion
 4 = sedenion
+5 = trigintaduonion / tricenibinions
+6 = sexagintaquatronions / sexagintaquaternions
+7 = centumduodetrigintanions
+8 = ducentiquinquagintasexions
+https://english.stackexchange.com/questions/234607/what-comes-after-the-ducentiquinquagintasexions/234621#234621
 --]]
 local table = require 'ext.table'
 local class = require 'ext.class'

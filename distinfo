@@ -1,0 +1,37 @@
+--------------------------------------------
+-- generated with dist/build-distinfo.rua --
+--------------------------------------------
+
+name = "cayley-dickson"
+files = {
+	["allspacing.rua"] = "cayley-dickson/allspacing.rua",
+	["cayley-dickson.lua"] = "cayley-dickson/cayley-dickson.lua",
+	["font.png"] = "cayley-dickson/font.png",
+	["get-mobius.rua"] = "cayley-dickson/get-mobius.rua",
+	["makedots.lua"] = "cayley-dickson/makedots.lua",
+	["octonion-triplets.lua"] = "cayley-dickson/octonion-triplets.lua",
+	["permutations.lua"] = "cayley-dickson/permutations.lua",
+	["sedenions.txt"] = "cayley-dickson/sedenions.txt",
+	["spacing.rua"] = "cayley-dickson/spacing.rua",
+	["subsets.lua"] = "cayley-dickson/subsets.lua",
+	["viz-forcegraph.rua"] = "cayley-dickson/viz-forcegraph.rua",
+	["viz-manual.lua"] = "cayley-dickson/viz-manual.lua",
+	["viz-octonions.rua"] = "cayley-dickson/viz-octonions.rua",
+	["viz.lua"] = "cayley-dickson/viz.lua",
+}
+deps = {
+	"bit",
+	"ext",
+	"ffi",
+	"matrix",
+	"template",
+	"vec",
+	"vec-ffi",
+	--"force-directed-graph",
+	--"gl",
+	--"glapp",
+	--"image",
+	--"imgui",
+	--"sdl",
+	--"symmath",
+}
