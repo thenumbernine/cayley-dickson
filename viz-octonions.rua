@@ -7,6 +7,7 @@ local GLSceneObject = require 'gl.sceneobject'
 local GLGeometry = require 'gl.geometry'
 local GLArrayBuffer = require 'gl.arraybuffer'
 local GLTex2D = require 'gl.tex2d'
+local GLHSVTex2D = require 'gl.hsvtex2d'
 	
 -- how many subscripts the textTex has ("e0" thru "e"...whatever)
 local textTexMaxLetters = 16
@@ -15,8 +16,9 @@ local App = require 'imgui.appwithorbit'()
 App.title = 'Octonion Multiplication Table'
 App.viewDist = 2
 
-local createIndexMapTex = |indexes|
-	GLTex2D{
+local createIndexMapTex = |indexes| do
+	print('creating texs for', tolua(indexes))
+	return GLTex2D{
 		image = Image(8, 1, 1, 'float', table(indexes):append{0}),
 		internalFormat = gl.GL_R32F,
 		minFilter = gl.GL_NEAREST,
@@ -26,6 +28,7 @@ local createIndexMapTex = |indexes|
 			t = gl.GL_REPEAT,
 		},
 	}:unbind()
+end
 
 App.createMobius = |:,basisIndexes| do
 	local xRes = 200
@@ -108,6 +111,9 @@ out vec4 fragColor;
 uniform sampler2D textTex;
 uniform sampler2D indexMapTex;
 
+uniform sampler2D gradTex;
+uniform vec2 gradRange;
+
 #if 0
 //  (0,1)
 //       +---+---+
@@ -119,6 +125,8 @@ uniform sampler2D indexMapTex;
 //     (1/2,0) |
 //           (3/2,0)
 #endif
+
+uniform float offset;
 
 float mod1(float x) { return x - floor(x); }
 
@@ -137,7 +145,9 @@ void main() {
 		u += .5;
 		v = 1. - v;
 	}
-	u = u * 7.;
+	u = mod1(u - offset);
+	float gradU = u;
+	u *= 7.;
 
 	{
 		vec2 tc;
@@ -176,19 +186,20 @@ void main() {
 	float iy = floor(.5 * v + u);
 	float ic = mod1(.5 * (ix + iy));
 
-	if (ic == 0.) {
-		fragColor = vec4(1., 0., 0., 1.);
-	} else {
-		discard;
-	}
+	if (ic != 0.) discard;
+
+	fragColor = texture(gradTex, vec2(mix(gradRange.x, gradRange.y, gradU), .5));
 
 	//apply diffuse lighting
 	fragColor *= max(abs(normalv.z), .3);
 }
 ]],
 			uniforms = {
+				offset = 0,
 				textTex = 0,
 				indexMapTex = 1,
+				gradTex = 2,
+				gradRange = {0,1},
 			},
 		},
 		geometries = geometries,
@@ -205,6 +216,7 @@ void main() {
 			self.textTex,
 			-- index-remapping
 			createIndexMapTex(basisIndexes),
+			self.gradTex,
 		},
 	}
 
@@ -230,7 +242,7 @@ App.initGL = |:|do
 		textImg:pasteInto{x=64*i + 8, y=8, image=fontImg:copy(letterToRegion'e')} -- "e"
 		textImg:pasteInto{x=64*i + 32, y=24, image=fontImg:copy(letterToRegion(i:hex())):resize(32, 32)} -- `i` from 0 to f (in hex)
 	end	
-textImg:save'octonion-tmp-tex.png'
+
 	self.textTex = GLTex2D{
 		image = textImg,
 		minFilter = gl.GL_NEAREST,
@@ -241,6 +253,13 @@ textImg:save'octonion-tmp-tex.png'
 		},
 	}:unbind()
 
+	self.gradTex = GLHSVTex2D(
+		256, nil, true
+--		minFilter = gl.GL_LINEAR_MIPMAP_LINEAR,
+--		magFilter = gl.GL_LINEAR,
+--		generateMipmap = true,
+	):unbind()
+
 	-- one possible mobius representation of quaternions-within-octonions
 	self.mobiusObj = self:createMobius{1,5,7,4,2,3,6}
 
@@ -248,7 +267,7 @@ textImg:save'octonion-tmp-tex.png'
 	
 	-- technicaly teh last two are reversed ... should I do that here?
 	-- also, the spacing implies, I'm going to have to space out the vertexes in these mobius strips to get them to match up with one another
-	local octInSedOffsets = table{0, 1, 2, 4, 5, 8, 10}
+	local octInSedOffsets = table{0, 1, 8, 4, 10, 5, 2}
 	
 	self.octInSedIndexMapTexs = range(0,14):mapi(|i|
 		octInSedOffsets:mapi(|j| sed[(i + j) % #sed + 1])
@@ -264,6 +283,8 @@ App.update = |:|do
 
 	--[[ draw one mobius
 	self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
+	self.mobiusObj.uniforms.offset = 0
+	self.mobiusObj.uniforms.gradRange = {0,1}
 	self.mobiusObj:draw()
 	--]]
 	-- [[ draw 7 mobiuses
@@ -274,6 +295,11 @@ App.update = |:|do
 		self.view.mvProjMat:mul4x4(self.view.projMat, self.view.mvMat)
 		
 		self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
+		self.mobiusObj.uniforms.offset = (i-1)/#self.octInSedIndexMapTexs
+		self.mobiusObj.uniforms.gradRange = {
+			(i-1)/#self.octInSedIndexMapTexs,
+			i/#self.octInSedIndexMapTexs,
+		}
 		self.mobiusObj.texs[2] = indexMapTex
 		self.mobiusObj:draw()
 	end
