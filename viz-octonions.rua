@@ -317,7 +317,7 @@ App.update = |:|do
 	for i,mobiusObj in ipairs(self.octMobiusObjs) do
 		self.view:setupModelView()	-- reset viewMat.  how about push/pop, or better, in View split mvMat into modelMat and viewMat?
 		self.view.mvMat:applyRotate(i / #self.octMobiusObjs * 2 * math.pi, 0, 1, 0)
-		self.view.mvMat:applyTranslate(2,0,0)
+		self.view.mvMat:applyTranslate(4, 0, 0)
 		self.view.mvProjMat:mul4x4(self.view.projMat, self.view.mvMat)
 		
 		mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
