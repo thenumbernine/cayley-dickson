@@ -30,7 +30,15 @@ local createIndexMapTex = |indexes| do
 	}:unbind()
 end
 
-App.createMobius = |:,basisIndexes| do
+local mobiusUV = |u,v| do
+	local r = vec3f(0, 0, v - .5)
+	r = quatf():fromAngleAxis(0,1,0,180*u):rotate(r)
+	r += vec3f(1,0,0)
+	r = quatf():fromAngleAxis(0,0,1,360*u):rotate(r)
+	return r
+end
+
+App.createMobius = |:, basisIndexes, vtxxform| do
 	local xRes = 200
 	local yRes = 10
 
@@ -44,10 +52,8 @@ App.createMobius = |:,basisIndexes| do
 		local v = j / (yRes-1)
 		for i=0,xRes-1 do
 			local u = i / (xRes-1)
-			local r = vec3f(0, 0, v - .5)
-			r = quatf():fromAngleAxis(0,1,0,180*u):rotate(r)
-			r += vec3f(1,0,0)
-			r = quatf():fromAngleAxis(0,0,1,360*u):rotate(r)
+			local r = mobiusUV(u,v)
+			if vtxxform then r = vtxxform(r, u, v) or r end
 			vertexCPU:emplace_back()[0] = r --:set( i / (xRes-1), j / (yRes-1) )
 			texcoordCPU:emplace_back():set( i / (xRes-1), j / (yRes-1) )
 		end
@@ -261,17 +267,38 @@ App.initGL = |:|do
 	):unbind()
 
 	-- one possible mobius representation of quaternions-within-octonions
-	self.mobiusObj = self:createMobius{1,5,7,4,2,3,6}
+	--self.mobiusObj = self:createMobius{1,5,7,4,2,3,6}
+	self.mobiusObj = self:createMobius{1,2,4,3,6,7,5}
 
 	local sed = table{1, 2, 5, 8, 3, 7, 13, 11, 4, 10, 6, 15, 14, 12, 9}
 	
 	-- technicaly teh last two are reversed ... should I do that here?
 	-- also, the spacing implies, I'm going to have to space out the vertexes in these mobius strips to get them to match up with one another
 	local octInSedOffsets = table{0, 1, 8, 4, 10, 5, 2}
-	
-	self.octInSedIndexMapTexs = range(0,14):mapi(|i|
+
+	self.octInSedIndexes = range(0,14):mapi(|i|
 		octInSedOffsets:mapi(|j| sed[(i + j) % #sed + 1])
-	):mapi(|indexes| createIndexMapTex(indexes))
+	)
+
+	self.octMobiusObjs = self.octInSedIndexes:mapi(|indexes, i| do
+		local mobiusObj = self:createMobius(indexes, |r, u, v| do
+			-- plz make a continuous mapping that maps from
+			-- for u*7 ...
+			-- 0->0
+			-- 1->1
+			-- 2->8
+			-- 3->4
+			-- 4->10
+			-- 5->5
+			-- 6->2
+		end)
+		mobiusObj.uniforms.offset = (i-1)/#self.octInSedIndexes
+		mobiusObj.uniforms.gradRange = {
+			(i-1)/#self.octInSedIndexes,
+			i/#self.octInSedIndexes,
+		}
+		return mobiusObj
+	end)
 
 	gl.glEnable(gl.GL_DEPTH_TEST)
 	gl.glClearColor(.1, .1, .1, 1)
@@ -280,7 +307,6 @@ end
 App.update = |:|do
 	gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
-
 	--[[ draw one mobius
 	self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
 	self.mobiusObj.uniforms.offset = 0
@@ -288,20 +314,14 @@ App.update = |:|do
 	self.mobiusObj:draw()
 	--]]
 	-- [[ draw 7 mobiuses
-	for i,indexMapTex in ipairs(self.octInSedIndexMapTexs) do
+	for i,mobiusObj in ipairs(self.octMobiusObjs) do
 		self.view:setupModelView()	-- reset viewMat.  how about push/pop, or better, in View split mvMat into modelMat and viewMat?
-		self.view.mvMat:applyRotate(i / #self.octInSedIndexMapTexs * 2 * math.pi, 0, 1, 0)
+		self.view.mvMat:applyRotate(i / #self.octMobiusObjs * 2 * math.pi, 0, 1, 0)
 		self.view.mvMat:applyTranslate(2,0,0)
 		self.view.mvProjMat:mul4x4(self.view.projMat, self.view.mvMat)
 		
-		self.mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
-		self.mobiusObj.uniforms.offset = (i-1)/#self.octInSedIndexMapTexs
-		self.mobiusObj.uniforms.gradRange = {
-			(i-1)/#self.octInSedIndexMapTexs,
-			i/#self.octInSedIndexMapTexs,
-		}
-		self.mobiusObj.texs[2] = indexMapTex
-		self.mobiusObj:draw()
+		mobiusObj.uniforms.mvProjMat = self.view.mvProjMat.ptr
+		mobiusObj:draw()
 	end
 	--]]
 	App.super.update(self)
