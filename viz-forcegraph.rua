@@ -267,6 +267,32 @@ local ig = require 'imgui'
 
 local MuhForceDirectedGraph = ForceDirectedGraph:subclass()
 
+--[[ if you want to force the e's on one side and q's on another ...
+MuhForceDirectedGraph.update = |:|do
+	MuhForceDirectedGraph.super.update(self)
+
+	for i=0,#self.nodes-1 do
+		local pos = self.posGPU.vec.v + i
+		local vel = self.velGPU.vec.v + i
+
+		local node = self.nodes[i+1]
+		if node.name:sub(1,1) == 'e' then
+			pos.x = -3
+			vel.x = 0
+		elseif node.name:sub(1,1) == 'o' then
+			pos.x = 3
+			vel.x = 0
+		end
+	end
+	self.posGPU
+		:bind()
+		:updateData()
+	self.velGPU
+		:bind()
+		:updateData()
+end
+--]]
+
 MuhForceDirectedGraph.updateGUI = |:|do
 	MuhForceDirectedGraph.super.updateGUI(self)
 
