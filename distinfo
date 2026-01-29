@@ -8,7 +8,6 @@ files = {
 	"allspacing.rua",
 	"cayley-dickson.lua",
 	"distinfo",
-	"font.png",
 	"get-mobius.rua",
 	"makedots.lua",
 	"octonion-triplets.lua",

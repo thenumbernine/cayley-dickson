@@ -216,7 +216,7 @@ App.initGL = |:|do
 	App.super.initGL(self)
 
 	-- generated ... from font.png (TODO generate font.png from a system font)
-	local fontImg = Image'font.png'
+	local fontImg = require 'gui.font':trueTypeToImage'arial.ttf'
 	local textImg = Image(64 * textTexMaxLetters, 64, fontImg.channels, 'uint8_t'):clear()
 	-- TODO additive-paste / alpha-paste
 	local letterToRegion = |c| {x=((c:byte() - 32) & 0xf) << 4, y=(c:byte() - 32) & 0xf0, width=16, height=16}
