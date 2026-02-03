@@ -91,7 +91,7 @@ void main() {
 
 	local vertexCount = #self.vertexCPU
 	self.vertexGPU = GLArrayBuffer{
-		size = vertexCount * ffi.sizeof(self.vertexCPU.T),
+		size = vertexCount * ffi.sizeof(self.vertexCPU.type),
 		data = self.vertexCPU.v,
 	}:unbind()
 
