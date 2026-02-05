@@ -14,7 +14,7 @@ local GLSceneObject = require 'gl.sceneobject'
 local GLAttribute = require 'gl.attribute'
 local GLArrayBuffer = require 'gl.arraybuffer'
 
-local vector_vec2f = vector'vec2f_t'
+local vector_vec2f = vector'vec2f'
 
 local App = require 'imgui.appwithorbit'()
 App.viewDist = 3
