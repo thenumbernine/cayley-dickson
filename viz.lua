@@ -7,18 +7,16 @@ local sdl = require 'sdl'
 local gl = require 'gl'
 local quat = require 'vec.quat'
 local GLApp = require 'glapp'
-local Mouse = require 'glapp.mouse'
 local CayleyDickson = require 'cayley-dickson'
 local GLTex2D = require 'gl.tex2d'
 local GLProgram = require 'gl.program'
 local glCallOrRun = require 'gl.call'
 local symmath = require 'symmath'
 
-local mouse = Mouse()
 local viewAngle = quat()
 
 local app	-- running singleton
-local App = GLApp:subclass()
+local App = require 'sdl.mouse'.apply(GLApp):subclass()
 App.viewUseGLMatrixMode = true
 App.title = 'Cayley-Dickson Mobius Renderer'
 
@@ -349,7 +347,7 @@ function MobiusBand:draw()
 end
 
 function App:update()
-	mouse:update()
+	local mouse = self.mouse
 	if mouse.leftDragging then
 		if leftShiftDown or rightShiftDown then
 			viewDist = viewDist * math.exp(10 * mouse.deltaPos.y)
@@ -529,6 +527,7 @@ end
 local leftShiftDown
 local rightShiftDown 
 function App:event(event)
+	App.super.event(self, event)
 	if event[0].type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN then
 		if event[0].button.button == sdl.SDL_BUTTON_WHEELUP then
 			orbitTargetDistance = orbitTargetDistance * orbitZoomFactor
