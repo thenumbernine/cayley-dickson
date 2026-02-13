@@ -26,7 +26,6 @@ deps = {
 	"ffi",
 	--"force-directed-graph",
 	--"gl",
-	--"glapp",
 	--"image",
 	--"imgui",
 	"matrix",
