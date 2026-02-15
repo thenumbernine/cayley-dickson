@@ -21,7 +21,7 @@ files = {
 	"viz.lua",
 }
 deps = {
-	"bit",
+	--"bit",
 	"ext",
 	"ffi",
 	--"force-directed-graph",
