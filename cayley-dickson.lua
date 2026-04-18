@@ -13,7 +13,6 @@ https://english.stackexchange.com/questions/234607/what-comes-after-the-ducentiq
 local table = require 'ext.table'
 local class = require 'ext.class'
 local string = require 'ext.string'
-local bit = require 'bit'
 
 local function negative(i,j,x)
 	if x == 1 then return false end
