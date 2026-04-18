@@ -1,6 +1,5 @@
 #!/usr/bin/env luajit
 local ffi = require 'ffi'
-local bit = require 'bit'
 local gl = require 'gl'
 local template = require 'template'
 local vec2f = require 'vec-ffi.vec2f'

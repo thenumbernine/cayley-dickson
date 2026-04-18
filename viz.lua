@@ -1,7 +1,6 @@
 #!/usr/bin/env luajit
 require 'ext'
 local ffi = require 'ffi'
-local bit = require 'bit'
 local vec3 = require 'vec.vec3'
 local sdl = require 'sdl'
 local gl = require 'gl'

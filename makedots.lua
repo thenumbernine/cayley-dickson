@@ -1,6 +1,5 @@
 #! /usr/bin/env luajit
 
-local bit = require 'bit'
 local table = require 'ext.table'
 local CayleyDickson = require 'cayley-dickson'
 
